@@ -10,7 +10,7 @@ A simple, locally-saved TODO list widget for the [DankMaterialShell](https://git
 - One-click toggle between active/completed
 - Per-item delete (cascades to subtasks), plus "Clear completed" shortcut
 - Filter chips: All / Active / Done
-- **Drag-and-drop reordering and nesting** — grab the handle on the left, drop above or below another todo to reorder, or drop *onto* a todo to make it a subtask
+- **Drag-and-drop reordering and nesting** — grab the handle on the left, drop above or below another todo to reorder, or drop _onto_ a todo to make it a subtask
 - Unlimited nesting depth, with indented display
 - Pill count mode — show active, total, done, or hide the badge
 - Storage location configurable; defaults to `$XDG_CONFIG_HOME/dank-todo/todos.json`
@@ -45,7 +45,12 @@ Then in DMS Settings → Plugins, click "Scan for Plugins" and enable **Dank Tod
 
 Click the pill in the bar to open the popout. Type a todo and press Enter. Click the circle to toggle, the trash icon to delete, or "Clear completed" to wipe done items.
 
-Each row also has a subtask button (`⤵`) next to delete — click it to compose a child todo. The main input switches to "Subtask of: …" mode; press Enter to add it, Escape (or the × on the indicator chip) to cancel back to adding top-level todos.
+Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
+
+- **Edit** — populates the main input with the row's text and switches to "Editing: …" mode. Enter saves, Escape (or the × on the chip) cancels.
+- **Subtask** — switches the main input to "Subtask of: …" mode. Enter adds the new todo as a child of that row, Escape (or ×) cancels.
+
+The two modes are exclusive — triggering one clears the other. The + button on the input turns into a ✓ when editing.
 
 **Reordering and grouping** (only in the All view): each row has a drag handle on the left. While dragging:
 
@@ -67,6 +72,7 @@ A blue line marks sibling drops; a tinted background marks child drops. Dropping
 ```bash
 dms ipc call dankTodo add "Buy milk"
 dms ipc call dankTodo addChild "Whole milk" <parentId>
+dms ipc call dankTodo edit <id> "New text"
 dms ipc call dankTodo toggle <id>
 dms ipc call dankTodo remove <id>
 dms ipc call dankTodo move <sourceId> <targetId> <position>   # position: before | after | child
@@ -93,23 +99,23 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
 
 ```json
 {
-    "version": 2,
-    "todos": [
-        {
-            "id": "parent-1",
-            "text": "Shopping",
-            "completed": false,
-            "parentId": null,
-            "createdAt": "2026-04-22T14:00:00.000Z"
-        },
-        {
-            "id": "child-1",
-            "text": "Buy milk",
-            "completed": false,
-            "parentId": "parent-1",
-            "createdAt": "2026-04-22T14:00:10.000Z"
-        }
-    ]
+  "version": 2,
+  "todos": [
+    {
+      "id": "parent-1",
+      "text": "Shopping",
+      "completed": false,
+      "parentId": null,
+      "createdAt": "2026-04-22T14:00:00.000Z"
+    },
+    {
+      "id": "child-1",
+      "text": "Buy milk",
+      "completed": false,
+      "parentId": "parent-1",
+      "createdAt": "2026-04-22T14:00:10.000Z"
+    }
+  ]
 }
 ```
 

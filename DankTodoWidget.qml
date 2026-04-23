@@ -358,6 +358,11 @@ PluginComponent {
             return "OK"
         }
 
+        function edit(id: string, text: string): string {
+            root.editTodo(id, text)
+            return "OK"
+        }
+
         function remove(id: string): string {
             root.deleteTodo(id)
             return "OK"
@@ -449,6 +454,7 @@ PluginComponent {
                 spacing: Theme.spacingM
 
                 property string addingChildOfId: ""
+                property string editingId: ""
 
                 readonly property string addingChildOfText: {
                     if (!addingChildOfId)
@@ -457,7 +463,71 @@ PluginComponent {
                     return p ? p.text : ""
                 }
 
-                // Target indicator — shown when composing a subtask
+                readonly property string editingText: {
+                    if (!editingId)
+                        return ""
+                    const p = root.todos.find(t => t.id === editingId)
+                    return p ? p.text : ""
+                }
+
+                function startAddingChild(parentId) {
+                    editingId = ""
+                    addInput.text = ""
+                    addingChildOfId = parentId
+                    addInput.forceActiveFocus()
+                }
+
+                function startEditing(id) {
+                    addingChildOfId = ""
+                    const t = root.todos.find(x => x.id === id)
+                    if (!t)
+                        return
+                    editingId = id
+                    addInput.text = t.text
+                    addInput.selectAll()
+                    addInput.forceActiveFocus()
+                }
+
+                function cancelComposer() {
+                    if (editingId) {
+                        editingId = ""
+                        addInput.text = ""
+                    } else if (addingChildOfId) {
+                        addingChildOfId = ""
+                    }
+                }
+
+                function submitComposer() {
+                    if (editingId) {
+                        const id = editingId
+                        const newText = addInput.text
+                        editingId = ""
+                        addInput.text = ""
+                        root.editTodo(id, newText)
+                        return true
+                    }
+                    if (root.addTodo(addInput.text, addingChildOfId || null)) {
+                        addInput.text = ""
+                        addingChildOfId = ""
+                        return true
+                    }
+                    return false
+                }
+
+                // Drop composer state if the referenced item disappears
+                Connections {
+                    target: root
+                    function onTodosChanged() {
+                        if (popoutColumn.editingId && !root.todos.find(t => t.id === popoutColumn.editingId)) {
+                            popoutColumn.editingId = ""
+                            addInput.text = ""
+                        }
+                        if (popoutColumn.addingChildOfId && !root.todos.find(t => t.id === popoutColumn.addingChildOfId))
+                            popoutColumn.addingChildOfId = ""
+                    }
+                }
+
+                // Target indicator — shown when composing a subtask or editing
                 Rectangle {
                     width: parent.width
                     height: 28
@@ -465,7 +535,7 @@ PluginComponent {
                     color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.12)
                     border.width: 1
                     border.color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.35)
-                    visible: popoutColumn.addingChildOfId !== ""
+                    visible: popoutColumn.addingChildOfId !== "" || popoutColumn.editingId !== ""
 
                     Row {
                         anchors.fill: parent
@@ -474,14 +544,14 @@ PluginComponent {
                         spacing: Theme.spacingXS
 
                         DankIcon {
-                            name: "subdirectory_arrow_right"
+                            name: popoutColumn.editingId ? "edit" : "subdirectory_arrow_right"
                             size: 14
                             color: Theme.primary
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
                         StyledText {
-                            text: "Subtask of: " + popoutColumn.addingChildOfText
+                            text: popoutColumn.editingId ? ("Editing: " + popoutColumn.editingText) : ("Subtask of: " + popoutColumn.addingChildOfText)
                             font.pixelSize: Theme.fontSizeSmall
                             color: Theme.primary
                             elide: Text.ElideRight
@@ -508,7 +578,7 @@ PluginComponent {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: popoutColumn.addingChildOfId = ""
+                                onClicked: popoutColumn.cancelComposer()
                             }
                         }
                     }
@@ -524,16 +594,19 @@ PluginComponent {
                         anchors.right: addButton.left
                         anchors.rightMargin: Theme.spacingS
                         anchors.verticalCenter: parent.verticalCenter
-                        placeholderText: popoutColumn.addingChildOfId ? "Subtask text and press Enter" : "Add a todo and press Enter"
+                        placeholderText: {
+                            if (popoutColumn.editingId)
+                                return "Edit and press Enter"
+                            if (popoutColumn.addingChildOfId)
+                                return "Subtask text and press Enter"
+                            return "Add a todo and press Enter"
+                        }
                         maximumLength: root.maxTextLength
                         onAccepted: {
-                            if (root.addTodo(text, popoutColumn.addingChildOfId || null)) {
-                                text = ""
-                                popoutColumn.addingChildOfId = ""
-                            }
+                            popoutColumn.submitComposer()
                             forceActiveFocus()
                         }
-                        Keys.onEscapePressed: popoutColumn.addingChildOfId = ""
+                        Keys.onEscapePressed: popoutColumn.cancelComposer()
                     }
 
                     Rectangle {
@@ -547,7 +620,7 @@ PluginComponent {
 
                         DankIcon {
                             anchors.centerIn: parent
-                            name: "add"
+                            name: popoutColumn.editingId ? "check" : "add"
                             size: 20
                             color: addArea.containsMouse ? Theme.onPrimary : Theme.primary
                         }
@@ -558,10 +631,7 @@ PluginComponent {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                if (root.addTodo(addInput.text, popoutColumn.addingChildOfId || null)) {
-                                    addInput.text = ""
-                                    popoutColumn.addingChildOfId = ""
-                                }
+                                popoutColumn.submitComposer()
                                 addInput.forceActiveFocus()
                             }
                         }
@@ -784,12 +854,36 @@ PluginComponent {
 
                                     StyledText {
                                         id: todoText
-                                        width: parent.width - (dragHandle.visible ? (dragHandle.width + Theme.spacingS) : 0) - checkIcon.width - addChildBtn.width - deleteBtn.width - Theme.spacingS * 3
+                                        width: parent.width - (dragHandle.visible ? (dragHandle.width + Theme.spacingS) : 0) - checkIcon.width - editBtn.width - addChildBtn.width - deleteBtn.width - Theme.spacingS * 4
                                         text: modelData.text
                                         color: modelData.completed ? Theme.surfaceVariantText : Theme.surfaceText
                                         font.strikeout: modelData.completed
                                         wrapMode: Text.WordWrap
                                         anchors.verticalCenter: parent.verticalCenter
+                                    }
+
+                                    Rectangle {
+                                        id: editBtn
+                                        width: 26
+                                        height: 26
+                                        radius: 13
+                                        color: editArea.containsMouse ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.2) : "transparent"
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        DankIcon {
+                                            anchors.centerIn: parent
+                                            name: "edit"
+                                            size: 16
+                                            color: editArea.containsMouse ? Theme.primary : Theme.surfaceVariantText
+                                        }
+
+                                        MouseArea {
+                                            id: editArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: popoutColumn.startEditing(modelData.id)
+                                        }
                                     }
 
                                     Rectangle {
@@ -812,10 +906,7 @@ PluginComponent {
                                             anchors.fill: parent
                                             hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                popoutColumn.addingChildOfId = modelData.id
-                                                addInput.forceActiveFocus()
-                                            }
+                                            onClicked: popoutColumn.startAddingChild(modelData.id)
                                         }
                                     }
 
