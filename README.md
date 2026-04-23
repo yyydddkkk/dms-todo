@@ -8,7 +8,7 @@ A simple, locally-saved TODO list widget for the [DankMaterialShell](https://git
 
 - Quick-add input (Enter to submit) right in the popout
 - One-click toggle between active/completed
-- Per-item delete (cascades to subtasks), plus "Clear completed" shortcut
+- Per-item delete (cascades to subtasks) and "Clear completed" both soft-delete items in storage
 - Filter chips: All / Active / Done
 - **Drag-and-drop reordering and nesting** — grab the handle on the left, drop above or below another todo to reorder, or drop _onto_ a todo to make it a subtask
 - Unlimited nesting depth, with indented display
@@ -43,7 +43,7 @@ Then in DMS Settings → Plugins, click "Scan for Plugins" and enable **Dank Tod
 
 ## Usage
 
-Click the pill in the bar to open the popout. Type a todo and press Enter. Click the circle to toggle, the trash icon to delete, or "Clear completed" to wipe done items.
+Click the pill in the bar to open the popout. Type a todo and press Enter. Click the circle to toggle, the trash icon to delete, or "Clear completed" to hide done items. Deleted items stay in the JSON file with a `deletedAt` timestamp and are omitted from the UI.
 
 Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
 
@@ -52,7 +52,7 @@ Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
 
 The two modes are exclusive — triggering one clears the other. The + button on the input turns into a ✓ when editing.
 
-**Reordering and grouping** (only in the All view): each row has a drag handle on the left. While dragging:
+**Reordering and grouping**: each row has a drag handle on the left in All, Active, and Done. While dragging:
 
 - Drop in the **top quarter** of a row → insert as a sibling **before** it
 - Drop in the **bottom quarter** → insert as a sibling **after** it (after its entire subtree)
@@ -119,7 +119,7 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
 }
 ```
 
-Array order is display order; `parentId: null` means top-level. The loader migrates older `version: 1` files automatically by defaulting `parentId` to `null`.
+Array order is display order; `parentId: null` means top-level. Soft-deleted items are retained in storage with `deletedAt` set and are filtered out of the UI and counts. The loader migrates older `version: 1` files automatically by defaulting `parentId` to `null`.
 
 ## Requirements
 

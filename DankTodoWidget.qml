@@ -33,20 +33,29 @@ PluginComponent {
 
     property var todos: []
     property int revision: 0
-    property string filter: "all"
+    property string filter: "active"
+    readonly property int visibleCount: {
+        revision
+        let n = 0
+        for (let i = 0; i < todos.length; i++) {
+            if (!todos[i].deletedAt)
+                n++
+        }
+        return n
+    }
 
     readonly property int activeCount: {
         revision
         let n = 0
         for (let i = 0; i < todos.length; i++) {
-            if (!todos[i].completed)
+            if (!todos[i].deletedAt && !todos[i].completed)
                 n++
         }
         return n
     }
     readonly property int doneCount: {
         revision
-        return todos.length - activeCount
+        return visibleCount - activeCount
     }
 
     function uid() {
@@ -63,6 +72,31 @@ PluginComponent {
             todos: todos
         }
         todoFile.setText(JSON.stringify(data, null, 2))
+    }
+
+    function reloadTodos() {
+        ensureStorageReady()
+        todoFile.reload()
+    }
+
+    function filteredTodos(filterKey) {
+        revision
+        const visibleTodos = todos.filter(t => !t.deletedAt)
+        if (filterKey === "active")
+            return visibleTodos.filter(t => !t.completed && !hasCompletedAncestor(t.id))
+        if (filterKey === "done")
+            return visibleTodos.filter(t => t.completed)
+        return visibleTodos
+    }
+
+    function hasCompletedAncestor(id) {
+        let cur = todos.find(t => t.id === id)
+        while (cur && cur.parentId) {
+            cur = todos.find(t => t.id === cur.parentId)
+            if (cur && !cur.deletedAt && cur.completed)
+                return true
+        }
+        return false
     }
 
     function depthOf(id) {
@@ -121,7 +155,7 @@ PluginComponent {
         const trimmed = String(text || "").replace(/\s+/g, " ").trim()
         if (!trimmed.length)
             return false
-        if (todos.length >= maxItems) {
+        if (visibleCount >= maxItems) {
             if (typeof ToastService !== "undefined")
                 ToastService.showWarning("Max " + maxItems + " todos reached")
             return false
@@ -135,7 +169,7 @@ PluginComponent {
         }
         if (entry.parentId) {
             // Insert right after parent so it becomes the first visible child
-            const parentIdx = todos.findIndex(t => t.id === entry.parentId)
+            const parentIdx = todos.findIndex(t => t.id === entry.parentId && !t.deletedAt)
             if (parentIdx === -1) {
                 entry.parentId = null
                 todos = [entry].concat(todos)
@@ -153,7 +187,7 @@ PluginComponent {
     }
 
     function toggleTodo(id) {
-        const idx = todos.findIndex(t => t.id === id)
+        const idx = todos.findIndex(t => t.id === id && !t.deletedAt)
         if (idx === -1)
             return
         const next = todos.slice()
@@ -170,8 +204,17 @@ PluginComponent {
         const toDelete = new Set([id])
         const descendants = getDescendantIds(id)
         descendants.forEach(d => toDelete.add(d))
-        const next = todos.filter(t => !toDelete.has(t.id))
-        if (next.length === todos.length)
+        const deletedAt = new Date().toISOString()
+        let changed = false
+        const next = todos.map(t => {
+            if (!toDelete.has(t.id) || t.deletedAt)
+                return t
+            changed = true
+            return Object.assign({}, t, {
+                deletedAt: deletedAt
+            })
+        })
+        if (!changed)
             return
         todos = next
         revision++
@@ -183,8 +226,8 @@ PluginComponent {
             return
         if (isDescendant(targetId, sourceId))
             return
-        const sourceIdx = todos.findIndex(t => t.id === sourceId)
-        const targetIdx = todos.findIndex(t => t.id === targetId)
+        const sourceIdx = todos.findIndex(t => t.id === sourceId && !t.deletedAt)
+        const targetIdx = todos.findIndex(t => t.id === targetId && !t.deletedAt)
         if (sourceIdx === -1 || targetIdx === -1)
             return
 
@@ -252,7 +295,7 @@ PluginComponent {
         const trimmed = String(newText || "").replace(/\s+/g, " ").trim()
         if (!trimmed.length)
             return
-        const idx = todos.findIndex(t => t.id === id)
+        const idx = todos.findIndex(t => t.id === id && !t.deletedAt)
         if (idx === -1)
             return
         const next = todos.slice()
@@ -265,8 +308,17 @@ PluginComponent {
     }
 
     function clearCompleted() {
-        const next = todos.filter(t => !t.completed)
-        if (next.length === todos.length)
+        const deletedAt = new Date().toISOString()
+        let changed = false
+        const next = todos.map(t => {
+            if (t.deletedAt || !t.completed)
+                return t
+            changed = true
+            return Object.assign({}, t, {
+                deletedAt: deletedAt
+            })
+        })
+        if (!changed)
             return
         todos = next
         revision++
@@ -276,7 +328,7 @@ PluginComponent {
     function pillCountLabel() {
         switch (countMode) {
         case "total":
-            return String(todos.length)
+            return String(visibleCount)
         case "done":
             return String(doneCount)
         case "hidden":
@@ -318,13 +370,18 @@ PluginComponent {
                     completed: Boolean(t.completed),
                     parentId: t.parentId || null,
                     createdAt: t.createdAt || new Date().toISOString(),
-                    completedAt: t.completedAt
+                    completedAt: t.completedAt,
+                    deletedAt: t.deletedAt
                 })
             }
-            // Drop dangling parent references (parent no longer exists)
+            const byId = new Map()
+            for (let i = 0; i < clean.length; i++)
+                byId.set(clean[i].id, clean[i])
+            // Drop dangling parent references and parents that are soft-deleted
             for (let i = 0; i < clean.length; i++) {
                 const pid = clean[i].parentId
-                if (pid && !seenIds.has(pid))
+                const parent = pid ? byId.get(pid) : null
+                if (pid && (!parent || parent.deletedAt))
                     clean[i].parentId = null
             }
             root.todos = clean
@@ -380,21 +437,18 @@ PluginComponent {
 
         function list(): string {
             try {
-                return JSON.stringify(root.todos)
+                return JSON.stringify(root.filteredTodos("all"))
             } catch (_) {
                 return "[]"
             }
         }
 
         function count(): string {
-            return root.activeCount + "/" + root.todos.length
+            return root.activeCount + "/" + root.visibleCount
         }
     }
 
-    Component.onCompleted: {
-        ensureStorageReady()
-        todoFile.reload()
-    }
+    Component.onCompleted: reloadTodos()
 
     horizontalBarPill: Component {
         Row {
@@ -445,8 +499,13 @@ PluginComponent {
             id: popout
 
             headerText: "Todos"
-            detailsText: root.todos.length === 0 ? "Nothing here yet" : (root.activeCount + " active • " + root.doneCount + " done")
+            detailsText: root.visibleCount === 0 ? "Nothing here yet" : (root.activeCount + " active • " + root.doneCount + " done")
             showCloseButton: true
+
+            onVisibleChanged: {
+                if (visible)
+                    root.reloadTodos()
+            }
 
             Column {
                 id: popoutColumn
@@ -648,14 +707,14 @@ PluginComponent {
                     Repeater {
                         model: [
                             {
-                                key: "all",
-                                label: "All",
-                                count: root.todos.length
-                            },
-                            {
                                 key: "active",
                                 label: "Active",
                                 count: root.activeCount
+                            },
+                            {
+                                key: "all",
+                                label: "All",
+                                count: root.visibleCount
                             },
                             {
                                 key: "done",
@@ -697,7 +756,6 @@ PluginComponent {
                     height: Math.min(320, Math.max(48, todoList.contentHeight))
 
                     property string dragId: ""
-                    readonly property bool dragEnabled: root.filter === "all"
                     readonly property int indentStep: 20
 
                     ListView {
@@ -707,12 +765,7 @@ PluginComponent {
                         clip: false
                         interactive: listContainer.dragId === ""
                         model: {
-                            root.revision
-                            if (root.filter === "active")
-                                return root.todos.filter(t => !t.completed)
-                            if (root.filter === "done")
-                                return root.todos.filter(t => t.completed)
-                            return root.todos
+                            return root.filteredTodos(root.filter)
                         }
 
                         displaced: Transition {
@@ -748,7 +801,7 @@ PluginComponent {
 
                             property var itemData: modelData
                             property string itemId: modelData ? modelData.id : ""
-                            property int depth: (listContainer.dragEnabled && modelData) ? root.depthOf(modelData.id) : 0
+                            property int depth: modelData ? root.depthOf(modelData.id) : 0
                             property string dropZone: ""
                             readonly property bool isDragSource: listContainer.dragId === slot.itemId
                             readonly property bool acceptsDrag: {
@@ -802,7 +855,6 @@ PluginComponent {
                                         radius: 10
                                         color: dragHandleArea.containsMouse || dragHandleArea.drag.active ? Theme.surfaceContainerHighest : "transparent"
                                         anchors.verticalCenter: parent.verticalCenter
-                                        visible: listContainer.dragEnabled
 
                                         DankIcon {
                                             anchors.centerIn: parent
@@ -972,7 +1024,6 @@ PluginComponent {
 
                             DropArea {
                                 anchors.fill: parent
-                                enabled: listContainer.dragEnabled
 
                                 onPositionChanged: drag => {
                                     if (!slot.acceptsDrag) {

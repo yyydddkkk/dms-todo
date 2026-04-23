@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) and other AI agents when working with code in this repository.
 
 ## What this is
 
@@ -37,7 +37,7 @@ Four files ship with the plugin:
 
 ### Data model and persistence
 
-Todos are a flat array with `parentId` linking children to parents (null = top-level). **Array order is display order**, so reorder operations mutate array position and the `parentId` field in tandem.
+Todos are a flat array with `parentId` linking children to parents (null = top-level). **Array order is display order**, so reorder operations mutate array position and the `parentId` field in tandem. Deletions are soft deletes via `deletedAt`; deleted rows remain persisted but are filtered out of UI counts and list models.
 
 Storage is a single JSON file (`$XDG_CONFIG_HOME/dank-todo/todos.json` by default) written via `Quickshell.Io.FileView` with `atomicWrites: true` and `watchChanges: false` — we own the writes, so watching would cause reload loops. The loader migrates legacy `version: 1` files by defaulting `parentId` to null and auto-sanitizes dangling parent references.
 
@@ -46,13 +46,13 @@ Storage is a single JSON file (`$XDG_CONFIG_HOME/dank-todo/todos.json` by defaul
 Inside `DankTodoWidget.qml` these are the load-bearing functions for the tree:
 
 - `depthOf(id)` — walk `parentId` chain, capped at depth 16.
-- `getDescendantIds(id)` — BFS all descendants. Used by `deleteTodo` (cascade) and by `moveTodo` (move a subtree as one block, block cycles).
+- `getDescendantIds(id)` — BFS all descendants. Used by `deleteTodo` (soft-delete a whole subtree) and by `moveTodo` (move a subtree as one block, block cycles).
 - `subtreeIndices(id)` — contiguous indices in `todos` for the subtree root, used when splicing a block out of the array.
 - `moveTodo(sourceId, targetId, position)` — single entry point for all three drop zones (`before`, `after`, `child`). Always re-parents the source's whole subtree as one unit and refuses to drop onto a descendant.
 
 ### Drag & drop
 
-Drag/drop is gated to the **All** filter (`listContainer.dragEnabled === (filter === "all")`). In Active/Done views there's no hierarchy semantics to preserve, so the handle/DropArea are hidden/disabled and the list renders flat.
+Drag/drop is available in all three filters. The view still renders a filtered slice of `todos`, but drop targets map back to the canonical array and continue to use the same `moveTodo(sourceId, targetId, position)` path, so reorder/grouping behavior stays consistent across All, Active, and Done.
 
 The delegate uses a **`dragProxy` wrapper Item** around the visual `card` Rectangle. The `MouseArea.drag.target` points at the proxy, not the card. This is deliberate: `drag.target` imperatively mutates `x`/`y`, which **breaks declarative bindings**. Since `card.x` is bound to `slot.depth * indentStep` so the indent tracks depth changes after moves, the card binding must stay intact — the proxy absorbs the drag translation instead. On release, the proxy resets to `0,0` (no broken bindings needed).
 
