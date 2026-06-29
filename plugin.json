@@ -14,10 +14,10 @@
         "dankbar-widget"
     ],
     "compositors": [
-        "niri"
+        "any"
     ],
     "distro": [
-        "arch"
+        "any"
     ],
     "dependencies": [],
     "permissions": [
