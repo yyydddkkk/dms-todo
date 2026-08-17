@@ -2354,8 +2354,7 @@ PluginComponent {
                                 return Theme.withAlpha(Theme.primary, 0.18)
                             return root.sortMode === "manual" ? "transparent" : Theme.withAlpha(Theme.primary, 0.11)
                         }
-                        border.width: 1
-                        border.color: activeFocus || root.sortMode !== "manual" ? Theme.primary : "transparent"
+                        border.width: 0
                         Keys.onReturnPressed: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
                         Keys.onPressed: event => {
                             if (event.key === Qt.Key_Space) {
