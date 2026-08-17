@@ -26,20 +26,24 @@ There is no lint or test suite. Validate changes by reloading DMS and driving th
 
 ## Architecture
 
-Four files ship with the plugin:
+The main files shipped with the plugin are:
 
 | File                  | Role                                                     |
 | --------------------- | -------------------------------------------------------- |
 | `plugin.json`         | DMS manifest. `capabilities: ["dankbar-widget"]` is what makes it show up in the Plugins tab. |
 | `DankTodoWidget.qml`  | `PluginComponent` root — bar pill, popout, data model, persistence, IPC. |
 | `DankTodoSettings.qml`| `PluginSettings` root — storage path, pill count mode, limits, IPC hints. |
+| `TodoCalendarGrid.qml`| Reusable themed month grid used by the task editor and schedule page. |
+| `TodoTaskRowV4.qml`   | Active shared task-row visual, schedule metadata, whole-row drag, and overflow actions. Older versions are retained temporarily to avoid stale DMS type caches. |
+| `CompletedTasksSectionV4.qml` | Active completed-task accordion and independently scrollable list. Older versions are retained temporarily for cache compatibility. |
+| `TodoUtils.js`        | Pure date, priority, and tag normalization/formatting helpers. |
 | `registry-entry.json` | Draft of the file that goes into `AvengeMedia/dms-plugin-registry` as `plugins/deepu105-dank-todo.json`. Not part of the plugin install. |
 
 ### Data model and persistence
 
 Todos are a flat array with `parentId` linking children to parents (null = top-level). **Array order is display order**, so reorder operations mutate array position and the `parentId` field in tandem. Deletions are soft deletes via `deletedAt`; deleted rows remain persisted but are filtered out of UI counts and list models.
 
-Storage is a single JSON file (`$XDG_CONFIG_HOME/dank-todo/todos.json` by default) written via `Quickshell.Io.FileView` with `atomicWrites: true` and `watchChanges: false` — we own the writes, so watching would cause reload loops. The loader migrates legacy `version: 1` files by defaulting `parentId` to null and auto-sanitizes dangling parent references.
+Storage is a single JSON file (`$XDG_CONFIG_HOME/dank-todo/todos.json` by default) written via `Quickshell.Io.FileView` with `atomicWrites: true` and `watchChanges: false` — we own the writes, so watching would cause reload loops. Schema v4 adds `dueTime`, `reminderMinutes`, `recurrence`, and persisted reminder state. The loader migrates legacy versions and auto-sanitizes dangling parent references.
 
 ### Hierarchy helpers
 

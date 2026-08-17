@@ -20,7 +20,7 @@ PluginSettings {
 
     StyledText {
         width: parent.width
-        text: "A local, JSON-backed todo list for the Dank bar"
+        text: "A local-first task manager with schedules, reminders, recurring tasks, and calendar views"
         font.pixelSize: Theme.fontSizeSmall
         color: Theme.surfaceVariantText
         wrapMode: Text.WordWrap
@@ -241,7 +241,7 @@ PluginSettings {
 
             StyledText {
                 width: parent.width
-                text: "dms ipc call dankTodo add \"Buy milk\"\ndms ipc call dankTodo toggle <id>\ndms ipc call dankTodo remove <id>\ndms ipc call dankTodo clearDone\ndms ipc call dankTodo list\ndms ipc call dankTodo count"
+                text: "dms ipc call dankTodo add \"Buy milk\"\ndms ipc call dankTodo setDetails <id> 2026-08-17 high work,urgent\ndms ipc call dankTodo setSchedule <id> 2026-08-17 09:00 10 weekly\ndms ipc call dankTodo snooze <id>\ndms ipc call dankTodo toggle <id>\ndms ipc call dankTodo remove <id>\ndms ipc call dankTodo restore <id>\ndms ipc call dankTodo purge <id>\ndms ipc call dankTodo emptyTrash\ndms ipc call dankTodo list\ndms ipc call dankTodo count"
                 font.pixelSize: Theme.fontSizeSmall
                 font.family: "monospace"
                 color: Theme.surfaceVariantText

@@ -1,10 +1,10 @@
 {
     "id": "dankTodo",
     "name": "Dank Todo",
-    "description": "A simple locally-saved TODO list widget for the Dank bar",
-    "version": "1.2.0",
+    "description": "A local-first task manager with schedules, reminders, recurring tasks, and calendar views",
+    "version": "2.1.0",
     "license": "MIT",
-    "author": "Deepu K Sasidharan",
+    "author": "Deepu K Sasidharan, yyydddkkk",
     "icon": "checklist",
     "type": "widget",
     "category": "productivity",
