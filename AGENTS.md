@@ -35,7 +35,7 @@ The main files shipped with the plugin are:
 | `DankTodoSettings.qml`| `PluginSettings` root — storage path, pill count mode, limits, IPC hints. |
 | `TodoCalendarGrid.qml`| Reusable themed month grid used by the task editor and schedule page. |
 | `TodoTaskRowV4.qml`   | Active shared task-row visual, schedule metadata, whole-row drag, and overflow actions. Older versions are retained temporarily to avoid stale DMS type caches. |
-| `CompletedTasksSectionV4.qml` | Active completed-task accordion and independently scrollable list. Older versions are retained temporarily for cache compatibility. |
+| `CompletedTasksSectionV6.qml` | Active completed-task accordion with period/custom-range filtering and an independently scrollable list. Older versions are retained temporarily for cache compatibility. |
 | `TodoUtils.js`        | Pure date, priority, and tag normalization/formatting helpers. |
 | `registry-entry.json` | Draft of the file that goes into `AvengeMedia/dms-plugin-registry` as `plugins/deepu105-dank-todo.json`. Not part of the plugin install. |
 

@@ -10,6 +10,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 - One-click toggle between active/completed
 - Per-item delete (cascades to subtasks) and "Clear completed" both soft-delete items in storage
 - Unified task page with active tasks first and a collapsed, independently scrollable Completed section below
+- Completed-task filtering for this week, last week, this month, or a custom inclusive date range
 - Trash is a separate page with restore, permanent-delete, and empty-trash actions
 - Due dates, priorities, and tags with inline editing
 - Integrated calendar date picker in the create/edit page
@@ -31,7 +32,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 
 - `DankTodoWidget.qml` — plugin entry, persistence, IPC, and page coordination
 - `TodoTaskRowV4.qml` — active shared task row with compact schedule metadata and overflow actions (older versions are retained for DMS cache compatibility)
-- `CompletedTasksSectionV4.qml` — active completed-task section and its independent list (older versions are retained for cache compatibility)
+- `CompletedTasksSectionV6.qml` — active completed-task section with time filtering and its independent list (older versions are retained for cache compatibility)
 - `TodoCalendarGrid.qml` — reusable month grid for date selection and schedule views
 - `TodoUtils.js` — pure date, priority, and tag helpers
 - `DankTodoSettings.qml` — plugin settings page
@@ -65,6 +66,8 @@ Then in DMS Settings → Plugins, click "Scan for Plugins" and enable **Dank Tod
 Click the pill in the bar to open the popout. The main page is dedicated to browsing and searching tasks. Click the **+** button beside search to open the separate creation page, enter a title and optional date, time, reminder, recurrence, priority, and tags, then save. The schedule page also has a **+** action that preselects the visible date. Click the circle to toggle, the trash icon to delete, or "Clear completed" to move done items to Trash. Deleted tasks can be restored or permanently removed from the Trash view.
 
 All-day tasks do not send notifications. Timed tasks can remind at the due time or in advance. After a reminder fires, use **Snooze 10 minutes** in the task menu to postpone it. Completing a recurring task keeps the completed occurrence and creates the next future occurrence on the original cadence.
+
+Expand **Completed** to filter its independent list by the current week, previous week, current month, or a custom inclusive date range. Custom ranges use calendar pickers and initially cover the most recent seven days. Completed tasks are shown newest first; legacy items without a completion timestamp remain available under **All**.
 
 Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
 

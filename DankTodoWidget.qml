@@ -528,6 +528,56 @@ PluginComponent {
         return filterKey === "active" ? sortedActiveTodos(result) : result
     }
 
+    function completedTasksForPeriod(period, referenceDate, customStartDate, customEndDate) {
+        const mode = (period === "thisWeek" || period === "lastWeek" || period === "thisMonth" || period === "custom") ? period : "all"
+        const items = filteredTodos("done")
+        const reference = new Date(referenceDate || new Date())
+        reference.setHours(0, 0, 0, 0)
+
+        const weekStart = new Date(reference)
+        const daysSinceMonday = (weekStart.getDay() + 6) % 7
+        weekStart.setDate(weekStart.getDate() - daysSinceMonday)
+        const nextWeekStart = new Date(weekStart)
+        nextWeekStart.setDate(nextWeekStart.getDate() + 7)
+        const lastWeekStart = new Date(weekStart)
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7)
+        const monthStart = new Date(reference.getFullYear(), reference.getMonth(), 1)
+        const nextMonthStart = new Date(reference.getFullYear(), reference.getMonth() + 1, 1)
+        const customStart = normalizeDueDate(customStartDate) ? new Date(customStartDate + "T00:00:00") : null
+        const customEndExclusive = normalizeDueDate(customEndDate) ? new Date(customEndDate + "T00:00:00") : null
+        if (customEndExclusive)
+            customEndExclusive.setDate(customEndExclusive.getDate() + 1)
+
+        const filtered = items.filter(todo => {
+            if (mode === "all")
+                return true
+            if (!todo.completedAt)
+                return false
+            const completed = new Date(todo.completedAt)
+            if (isNaN(completed.getTime()))
+                return false
+            if (mode === "thisWeek")
+                return completed >= weekStart && completed < nextWeekStart
+            if (mode === "lastWeek")
+                return completed >= lastWeekStart && completed < weekStart
+            if (mode === "custom")
+                return customStart && customEndExclusive && completed >= customStart && completed < customEndExclusive
+            return completed >= monthStart && completed < nextMonthStart
+        })
+
+        return filtered.map((todo, index) => ({ todo: todo, index: index }))
+            .sort((a, b) => {
+                const parsedA = a.todo.completedAt ? Date.parse(a.todo.completedAt) : NaN
+                const parsedB = b.todo.completedAt ? Date.parse(b.todo.completedAt) : NaN
+                const timeA = isNaN(parsedA) ? 0 : parsedA
+                const timeB = isNaN(parsedB) ? 0 : parsedB
+                if (timeA !== timeB)
+                    return timeB - timeA
+                return a.index - b.index
+            })
+            .map(entry => entry.todo)
+    }
+
     function hasCompletedAncestor(id) {
         let cur = todos.find(t => t.id === id)
         while (cur && cur.parentId) {
@@ -1181,6 +1231,7 @@ PluginComponent {
                 property string previousFilter: "all"
                 property string previousSearch: ""
                 property bool completedExpanded: false
+                property string completedTimeFilter: "all"
                 property bool sortMenuOpen: false
 
                 function resetMetadata() {
@@ -1568,7 +1619,7 @@ PluginComponent {
                 Component {
                     id: completedSectionComponent
 
-                    CompletedTasksSectionV4 {
+                    CompletedTasksSectionV6 {
                         pluginRoot: root
                         controller: popoutColumn
                     }
