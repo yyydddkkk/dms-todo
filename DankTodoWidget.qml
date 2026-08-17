@@ -2653,11 +2653,7 @@ PluginComponent {
                             height: 30
                             radius: Theme.cornerRadius
                             activeFocusOnTab: true
-                            color: {
-                                if (sortArea.containsMouse || popoutColumn.sortMenuOpen)
-                                    return Theme.withAlpha(Theme.primary, 0.18)
-                                return root.sortMode === "manual" ? "transparent" : Theme.withAlpha(Theme.primary, 0.11)
-                            }
+                            color: "transparent"
                             Keys.onReturnPressed: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
                             Keys.onPressed: event => {
                                 if (event.key === Qt.Key_Space) {
@@ -2691,7 +2687,7 @@ PluginComponent {
                             height: 30
                             radius: Theme.cornerRadius
                             activeFocusOnTab: true
-                            color: calendarArea.containsMouse ? Theme.withAlpha(Theme.primary, 0.2) : Theme.withAlpha(Theme.primary, 0.11)
+                            color: "transparent"
                             Keys.onReturnPressed: popoutColumn.openCalendar()
                             Keys.onPressed: event => {
                                 if (event.key === Qt.Key_Space) {
