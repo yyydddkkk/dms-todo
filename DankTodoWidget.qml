@@ -37,6 +37,7 @@ PluginComponent {
     property bool notificationAvailable: true
     property string filter: "all"
     property string searchQuery: ""
+    property string sortMode: "manual"
     readonly property int visibleCount: {
         revision
         let n = 0
@@ -378,6 +379,9 @@ PluginComponent {
     function saveTodos() {
         const data = {
             version: 4,
+            preferences: {
+                sortMode: sortMode
+            },
             todos: todos
         }
         todoFile.setText(JSON.stringify(data, null, 2))
@@ -386,6 +390,115 @@ PluginComponent {
     function reloadTodos() {
         ensureStorageReady()
         todoFile.reload()
+    }
+
+    function normalizeSortMode(value) {
+        const mode = String(value || "manual")
+        return (mode === "due" || mode === "priority") ? mode : "manual"
+    }
+
+    function setSortMode(value) {
+        const mode = normalizeSortMode(value)
+        if (sortMode === mode)
+            return
+        sortMode = mode
+        revision++
+        saveTodos()
+    }
+
+    function taskDueSortKey(todo) {
+        if (!todo || !todo.dueDate)
+            return "~"
+        return todo.dueDate + "T" + (todo.dueTime || "00:00")
+    }
+
+    function priorityRank(priority) {
+        if (priority === "high")
+            return 0
+        if (priority === "medium")
+            return 1
+        if (priority === "low")
+            return 2
+        return 3
+    }
+
+    function sortedActiveTodos(items) {
+        if (sortMode === "manual" || items.length < 2)
+            return items
+
+        const visibleById = new Map()
+        for (let i = 0; i < items.length; i++)
+            visibleById.set(items[i].id, items[i])
+
+        const groups = []
+        const groupsByRoot = new Map()
+        for (let i = 0; i < items.length; i++) {
+            const todo = items[i]
+            let rootTodo = todo
+            let guard = 0
+            while (rootTodo.parentId && visibleById.has(rootTodo.parentId) && guard < 32) {
+                rootTodo = visibleById.get(rootTodo.parentId)
+                guard++
+            }
+            let group = groupsByRoot.get(rootTodo.id)
+            if (!group) {
+                group = { rootId: rootTodo.id, originalIndex: groups.length, items: [] }
+                groupsByRoot.set(rootTodo.id, group)
+                groups.push(group)
+            }
+            group.items.push(todo)
+        }
+
+        function groupDueKey(group) {
+            let key = "~"
+            for (let i = 0; i < group.items.length; i++) {
+                const candidate = root.taskDueSortKey(group.items[i])
+                if (candidate < key)
+                    key = candidate
+            }
+            return key
+        }
+
+        function groupPriorityRank(group) {
+            let rank = 3
+            for (let i = 0; i < group.items.length; i++)
+                rank = Math.min(rank, root.priorityRank(group.items[i].priority))
+            return rank
+        }
+
+        groups.sort((a, b) => {
+            if (sortMode === "priority") {
+                const priorityDelta = groupPriorityRank(a) - groupPriorityRank(b)
+                if (priorityDelta !== 0)
+                    return priorityDelta
+            }
+            const dueA = groupDueKey(a)
+            const dueB = groupDueKey(b)
+            if (dueA < dueB)
+                return -1
+            if (dueA > dueB)
+                return 1
+            return a.originalIndex - b.originalIndex
+        })
+
+        const sorted = []
+        for (let i = 0; i < groups.length; i++)
+            sorted.push(...groups[i].items)
+        return sorted
+    }
+
+    function shortcutDate(kind, baseDate) {
+        const result = new Date(baseDate || new Date())
+        result.setHours(12, 0, 0, 0)
+        if (kind === "tomorrow") {
+            result.setDate(result.getDate() + 1)
+        } else if (kind === "nextMonday") {
+            let days = (8 - result.getDay()) % 7
+            if (days === 0)
+                days = 7
+            result.setDate(result.getDate() + days)
+        }
+        return localDateKey(result)
     }
 
     function filteredTodos(filterKey) {
@@ -412,7 +525,7 @@ PluginComponent {
                 return (String(t.text || "") + " " + tags).toLowerCase().indexOf(query) !== -1
             })
         }
-        return result
+        return filterKey === "active" ? sortedActiveTodos(result) : result
     }
 
     function hasCompletedAncestor(id) {
@@ -788,6 +901,8 @@ PluginComponent {
                 parsed = null
             }
             const raw = parsed && Array.isArray(parsed.todos) ? parsed.todos : (Array.isArray(parsed) ? parsed : [])
+            const storedPreferences = parsed && parsed.preferences && typeof parsed.preferences === "object" ? parsed.preferences : {}
+            root.sortMode = root.normalizeSortMode(storedPreferences.sortMode)
             const clean = []
             const seenIds = new Set()
             for (let i = 0; i < raw.length; i++) {
@@ -839,7 +954,7 @@ PluginComponent {
             }
             root.todos = clean
             root.revision++
-            if (!parsed || Number(parsed.version) !== 4)
+            if (!parsed || Number(parsed.version) !== 4 || !parsed.preferences)
                 Qt.callLater(root.saveTodos)
             Qt.callLater(root.checkReminders)
         }
@@ -1066,6 +1181,7 @@ PluginComponent {
                 property string previousFilter: "all"
                 property string previousSearch: ""
                 property bool completedExpanded: false
+                property bool sortMenuOpen: false
 
                 function resetMetadata() {
                     dueDateInput.text = ""
@@ -1135,6 +1251,7 @@ PluginComponent {
                 }
 
                 function startCreating() {
+                    sortMenuOpen = false
                     editorReturnPage = "main"
                     editingId = ""
                     addingChildOfId = ""
@@ -1147,6 +1264,7 @@ PluginComponent {
                 }
 
                 function startCreatingForDate(date) {
+                    sortMenuOpen = false
                     editingId = ""
                     addingChildOfId = ""
                     addInput.text = ""
@@ -1160,6 +1278,7 @@ PluginComponent {
                 }
 
                 function startAddingChild(parentId) {
+                    sortMenuOpen = false
                     editorReturnPage = calendarOpen ? "calendar" : "main"
                     editingId = ""
                     addInput.text = ""
@@ -1171,6 +1290,7 @@ PluginComponent {
                 }
 
                 function startEditing(id) {
+                    sortMenuOpen = false
                     editorReturnPage = calendarOpen ? "calendar" : "main"
                     addingChildOfId = ""
                     const t = root.todos.find(x => x.id === id)
@@ -1199,6 +1319,7 @@ PluginComponent {
                 }
 
                 function openTrash() {
+                    sortMenuOpen = false
                     previousFilter = root.filter === "trash" ? "all" : root.filter
                     previousSearch = root.searchQuery
                     root.filter = "trash"
@@ -1214,6 +1335,7 @@ PluginComponent {
                 }
 
                 function openCalendar() {
+                    sortMenuOpen = false
                     previousSearch = root.searchQuery
                     root.searchQuery = ""
                     calendarAnchorDate = new Date()
@@ -1565,6 +1687,49 @@ PluginComponent {
                                     ToolTip.delay: 800
                                     ToolTip.text: "Choose date"
                                     onClicked: popoutColumn.toggleDatePicker()
+                                }
+                            }
+                        }
+
+                        Row {
+                            id: dateShortcutRow
+                            width: parent.width
+                            spacing: Theme.spacingXS
+                            property real choiceWidth: (width - spacing * 2) / 3
+
+                            Repeater {
+                                model: [
+                                    { key: "today", label: "Today" },
+                                    { key: "tomorrow", label: "Tomorrow" },
+                                    { key: "nextMonday", label: "Next Monday" }
+                                ]
+
+                                Rectangle {
+                                    readonly property string shortcutValue: root.shortcutDate(modelData.key, new Date())
+                                    readonly property bool selected: root.normalizeDueDate(dueDateInput.text) === shortcutValue
+                                    width: dateShortcutRow.choiceWidth
+                                    height: 30
+                                    radius: Theme.cornerRadius
+                                    color: selected ? Theme.withAlpha(Theme.primary, 0.16) : (dateShortcutArea.containsMouse ? Theme.surfaceContainerHighest : "transparent")
+
+                                    StyledText {
+                                        anchors.centerIn: parent
+                                        text: modelData.label
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        font.weight: parent.selected ? Font.Medium : Font.Normal
+                                        color: parent.selected ? Theme.primary : Theme.surfaceVariantText
+                                    }
+
+                                    MouseArea {
+                                        id: dateShortcutArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            dueDateInput.text = parent.shortcutValue
+                                            popoutColumn.datePickerOpen = false
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2168,11 +2333,54 @@ PluginComponent {
                     DankTextField {
                         id: searchInput
                         anchors.left: parent.left
-                        anchors.right: calendarButton.left
+                        anchors.right: sortButton.left
                         anchors.rightMargin: Theme.spacingS
                         anchors.verticalCenter: parent.verticalCenter
                         placeholderText: "Search tasks and tags"
                         onTextChanged: root.searchQuery = text
+                    }
+
+                    Rectangle {
+                        id: sortButton
+                        width: 40
+                        height: 40
+                        radius: Theme.cornerRadius
+                        activeFocusOnTab: true
+                        anchors.right: calendarButton.left
+                        anchors.rightMargin: Theme.spacingS
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: {
+                            if (sortArea.containsMouse || popoutColumn.sortMenuOpen)
+                                return Theme.withAlpha(Theme.primary, 0.18)
+                            return root.sortMode === "manual" ? "transparent" : Theme.withAlpha(Theme.primary, 0.11)
+                        }
+                        border.width: 1
+                        border.color: activeFocus || root.sortMode !== "manual" ? Theme.primary : "transparent"
+                        Keys.onReturnPressed: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
+                        Keys.onPressed: event => {
+                            if (event.key === Qt.Key_Space) {
+                                popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
+                                event.accepted = true
+                            }
+                        }
+
+                        DankIcon {
+                            anchors.centerIn: parent
+                            name: "sort"
+                            size: 19
+                            color: root.sortMode === "manual" ? Theme.surfaceVariantText : Theme.primary
+                        }
+
+                        MouseArea {
+                            id: sortArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            ToolTip.visible: containsMouse
+                            ToolTip.delay: 800
+                            ToolTip.text: root.sortMode === "due" ? "Sort: Due date" : (root.sortMode === "priority" ? "Sort: Priority" : "Sort: Manual")
+                            onClicked: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
+                        }
                     }
 
                     Rectangle {
@@ -2254,6 +2462,53 @@ PluginComponent {
                 }
 
                 Item {
+                    width: parent.width
+                    height: visible ? 32 : 0
+                    visible: !popoutColumn.editorOpen && !popoutColumn.trashOpen && !popoutColumn.calendarOpen && popoutColumn.sortMenuOpen
+
+                    Row {
+                        id: sortChoices
+                        anchors.fill: parent
+                        spacing: Theme.spacingXS
+                        property real choiceWidth: (width - spacing * 2) / 3
+
+                        Repeater {
+                            model: [
+                                { key: "manual", label: "Manual" },
+                                { key: "due", label: "Due date" },
+                                { key: "priority", label: "Priority" }
+                            ]
+
+                            Rectangle {
+                                width: sortChoices.choiceWidth
+                                height: parent.height
+                                radius: Theme.cornerRadius
+                                color: root.sortMode === modelData.key ? Theme.withAlpha(Theme.primary, 0.16) : (sortChoiceArea.containsMouse ? Theme.surfaceContainerHighest : "transparent")
+
+                                StyledText {
+                                    anchors.centerIn: parent
+                                    text: modelData.label
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.weight: root.sortMode === modelData.key ? Font.Medium : Font.Normal
+                                    color: root.sortMode === modelData.key ? Theme.primary : Theme.surfaceVariantText
+                                }
+
+                                MouseArea {
+                                    id: sortChoiceArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.setSortMode(modelData.key)
+                                        popoutColumn.sortMenuOpen = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Item {
                     id: listContainer
                     width: parent.width
                     height: Math.min(320, Math.max(48, todoList.contentHeight))
@@ -2310,7 +2565,7 @@ PluginComponent {
                             property string dropZone: ""
                             readonly property bool isDragSource: listContainer.dragId === slot.itemId
                             readonly property bool acceptsDrag: {
-                                if (!listContainer.dragId || popoutColumn.trashOpen || slot.isDragSource)
+                                if (!listContainer.dragId || popoutColumn.trashOpen || root.sortMode !== "manual" || slot.isDragSource)
                                     return false
                                 return !root.isDescendant(slot.itemId, listContainer.dragId)
                             }
@@ -2321,7 +2576,7 @@ PluginComponent {
                                 height: slot.height
                                 z: slot.isDragSource ? 1000 : 0
 
-                                Drag.active: taskRow.dragging && !popoutColumn.trashOpen
+                                Drag.active: taskRow.dragging && !popoutColumn.trashOpen && root.sortMode === "manual"
                                 Drag.source: slot
                                 Drag.hotSpot.x: dragProxy.width / 2
                                 Drag.hotSpot.y: dragProxy.height / 2
@@ -2337,7 +2592,7 @@ PluginComponent {
                                     taskText: String(modelData.text || "")
                                     mode: popoutColumn.trashOpen ? "trash" : "active"
                                     dragTarget: dragProxy
-                                    dragEnabled: !popoutColumn.trashOpen
+                                    dragEnabled: !popoutColumn.trashOpen && root.sortMode === "manual"
                                     dragSource: slot.isDragSource
                                     childDropTarget: listContainer.dragId && slot.dropZone === "child" && slot.acceptsDrag
 

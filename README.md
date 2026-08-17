@@ -17,6 +17,8 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 - Optional due times with desktop reminders at the due time or 10 minutes, 1 hour, or 1 day early
 - Daily, weekday, weekly, and monthly recurring tasks that retain completed history
 - Create a task directly from the selected day in the schedule page
+- Quick due-date choices for today, tomorrow, and next Monday
+- Persistent manual, due-date, and priority sorting on the main task list
 - Search across task text and tags
 - **Drag-and-drop reordering and nesting** — drag a task row and drop above, below, or onto another task
 - Unlimited nesting depth, with indented display
@@ -71,7 +73,7 @@ Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
 
 The two modes are exclusive — triggering one clears the other. The + button on the input turns into a ✓ when editing.
 
-**Reordering and grouping**: each non-trash row has a drag handle on the left. While dragging:
+**Reordering and grouping**: in Manual sort mode, drag a non-trash task row to move it:
 
 - Drop in the **top quarter** of a row → insert as a sibling **before** it
 - Drop in the **bottom quarter** → insert as a sibling **after** it (after its entire subtree)
@@ -125,6 +127,9 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
 ```json
 {
   "version": 4,
+  "preferences": {
+    "sortMode": "manual"
+  },
   "todos": [
     {
       "id": "parent-1",
@@ -151,7 +156,7 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
 }
 ```
 
-Array order is display order; `parentId: null` means top-level. Soft-deleted items are retained with `deletedAt`, hidden from normal views and available in Trash. The loader migrates older version 1–3 data automatically; missing schedule fields, priorities, and tags receive safe defaults. Reminder state is persisted so plugin reloads do not duplicate notifications.
+Array order is the manual display order; `parentId: null` means top-level. Due-date and priority sorting affect only the rendered active list and preserve that manual order. Soft-deleted items are retained with `deletedAt`, hidden from normal views and available in Trash. The loader migrates older version 1–3 data automatically; missing schedule fields, priorities, tags, and preferences receive safe defaults. Reminder state is persisted so plugin reloads do not duplicate notifications.
 
 ## Requirements
 
