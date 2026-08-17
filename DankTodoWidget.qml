@@ -2333,92 +2333,11 @@ PluginComponent {
                     DankTextField {
                         id: searchInput
                         anchors.left: parent.left
-                        anchors.right: sortButton.left
+                        anchors.right: createButton.left
                         anchors.rightMargin: Theme.spacingS
                         anchors.verticalCenter: parent.verticalCenter
                         placeholderText: "Search tasks and tags"
                         onTextChanged: root.searchQuery = text
-                    }
-
-                    Rectangle {
-                        id: sortButton
-                        width: 40
-                        height: 40
-                        radius: Theme.cornerRadius
-                        activeFocusOnTab: true
-                        anchors.right: calendarButton.left
-                        anchors.rightMargin: Theme.spacingS
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: {
-                            if (sortArea.containsMouse || popoutColumn.sortMenuOpen)
-                                return Theme.withAlpha(Theme.primary, 0.18)
-                            return root.sortMode === "manual" ? "transparent" : Theme.withAlpha(Theme.primary, 0.11)
-                        }
-                        border.width: 0
-                        Keys.onReturnPressed: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
-                        Keys.onPressed: event => {
-                            if (event.key === Qt.Key_Space) {
-                                popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
-                                event.accepted = true
-                            }
-                        }
-
-                        DankIcon {
-                            anchors.centerIn: parent
-                            name: "sort"
-                            size: 19
-                            color: root.sortMode === "manual" ? Theme.surfaceVariantText : Theme.primary
-                        }
-
-                        MouseArea {
-                            id: sortArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            ToolTip.visible: containsMouse
-                            ToolTip.delay: 800
-                            ToolTip.text: root.sortMode === "due" ? "Sort: Due date" : (root.sortMode === "priority" ? "Sort: Priority" : "Sort: Manual")
-                            onClicked: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
-                        }
-                    }
-
-                    Rectangle {
-                        id: calendarButton
-                        width: 40
-                        height: 40
-                        radius: Theme.cornerRadius
-                        activeFocusOnTab: true
-                        anchors.right: createButton.left
-                        anchors.rightMargin: Theme.spacingS
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: calendarArea.containsMouse ? Theme.withAlpha(Theme.primary, 0.2) : Theme.withAlpha(Theme.primary, 0.11)
-                        border.width: 1
-                        border.color: activeFocus ? Theme.primary : "transparent"
-                        Keys.onReturnPressed: popoutColumn.openCalendar()
-                        Keys.onPressed: event => {
-                            if (event.key === Qt.Key_Space) {
-                                popoutColumn.openCalendar()
-                                event.accepted = true
-                            }
-                        }
-
-                        DankIcon {
-                            anchors.centerIn: parent
-                            name: "calendar_month"
-                            size: 19
-                            color: Theme.primary
-                        }
-
-                        MouseArea {
-                            id: calendarArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            ToolTip.visible: containsMouse
-                            ToolTip.delay: 800
-                            ToolTip.text: "Schedule"
-                            onClicked: popoutColumn.openCalendar()
-                        }
                     }
 
                     Rectangle {
@@ -2456,53 +2375,6 @@ PluginComponent {
                             ToolTip.delay: 800
                             ToolTip.text: "New task"
                             onClicked: popoutColumn.startCreating()
-                        }
-                    }
-                }
-
-                Item {
-                    width: parent.width
-                    height: visible ? 32 : 0
-                    visible: !popoutColumn.editorOpen && !popoutColumn.trashOpen && !popoutColumn.calendarOpen && popoutColumn.sortMenuOpen
-
-                    Row {
-                        id: sortChoices
-                        anchors.fill: parent
-                        spacing: Theme.spacingXS
-                        property real choiceWidth: (width - spacing * 2) / 3
-
-                        Repeater {
-                            model: [
-                                { key: "manual", label: "Manual" },
-                                { key: "due", label: "Due date" },
-                                { key: "priority", label: "Priority" }
-                            ]
-
-                            Rectangle {
-                                width: sortChoices.choiceWidth
-                                height: parent.height
-                                radius: Theme.cornerRadius
-                                color: root.sortMode === modelData.key ? Theme.withAlpha(Theme.primary, 0.16) : (sortChoiceArea.containsMouse ? Theme.surfaceContainerHighest : "transparent")
-
-                                StyledText {
-                                    anchors.centerIn: parent
-                                    text: modelData.label
-                                    font.pixelSize: Theme.fontSizeSmall
-                                    font.weight: root.sortMode === modelData.key ? Font.Medium : Font.Normal
-                                    color: root.sortMode === modelData.key ? Theme.primary : Theme.surfaceVariantText
-                                }
-
-                                MouseArea {
-                                    id: sortChoiceArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        root.setSortMode(modelData.key)
-                                        popoutColumn.sortMenuOpen = false
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -2680,6 +2552,53 @@ PluginComponent {
 
                 Item {
                     width: parent.width
+                    height: visible ? 32 : 0
+                    visible: !popoutColumn.editorOpen && !popoutColumn.trashOpen && !popoutColumn.calendarOpen && popoutColumn.sortMenuOpen
+
+                    Row {
+                        id: sortChoices
+                        anchors.fill: parent
+                        spacing: Theme.spacingXS
+                        property real choiceWidth: (width - spacing * 2) / 3
+
+                        Repeater {
+                            model: [
+                                { key: "manual", label: "Manual" },
+                                { key: "due", label: "Due date" },
+                                { key: "priority", label: "Priority" }
+                            ]
+
+                            Rectangle {
+                                width: sortChoices.choiceWidth
+                                height: parent.height
+                                radius: Theme.cornerRadius
+                                color: root.sortMode === modelData.key ? Theme.withAlpha(Theme.primary, 0.16) : (sortChoiceArea.containsMouse ? Theme.surfaceContainerHighest : "transparent")
+
+                                StyledText {
+                                    anchors.centerIn: parent
+                                    text: modelData.label
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.weight: root.sortMode === modelData.key ? Font.Medium : Font.Normal
+                                    color: root.sortMode === modelData.key ? Theme.primary : Theme.surfaceVariantText
+                                }
+
+                                MouseArea {
+                                    id: sortChoiceArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.setSortMode(modelData.key)
+                                        popoutColumn.sortMenuOpen = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Item {
+                    width: parent.width
                     height: 30
                     visible: !popoutColumn.editorOpen && !popoutColumn.calendarOpen && (!popoutColumn.trashOpen || root.deletedCount > 0)
 
@@ -2719,6 +2638,85 @@ PluginComponent {
                             ToolTip.delay: 800
                             ToolTip.text: "Trash"
                             onClicked: popoutColumn.openTrash()
+                        }
+                    }
+
+                    Row {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.spacingXS
+                        visible: !popoutColumn.trashOpen
+
+                        Rectangle {
+                            id: sortButton
+                            width: 30
+                            height: 30
+                            radius: Theme.cornerRadius
+                            activeFocusOnTab: true
+                            color: {
+                                if (sortArea.containsMouse || popoutColumn.sortMenuOpen)
+                                    return Theme.withAlpha(Theme.primary, 0.18)
+                                return root.sortMode === "manual" ? "transparent" : Theme.withAlpha(Theme.primary, 0.11)
+                            }
+                            Keys.onReturnPressed: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
+                            Keys.onPressed: event => {
+                                if (event.key === Qt.Key_Space) {
+                                    popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
+                                    event.accepted = true
+                                }
+                            }
+
+                            DankIcon {
+                                anchors.centerIn: parent
+                                name: "sort"
+                                size: 17
+                                color: root.sortMode === "manual" ? Theme.surfaceVariantText : Theme.primary
+                            }
+
+                            MouseArea {
+                                id: sortArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                ToolTip.visible: containsMouse
+                                ToolTip.delay: 800
+                                ToolTip.text: root.sortMode === "due" ? "Sort: Due date" : (root.sortMode === "priority" ? "Sort: Priority" : "Sort: Manual")
+                                onClicked: popoutColumn.sortMenuOpen = !popoutColumn.sortMenuOpen
+                            }
+                        }
+
+                        Rectangle {
+                            id: calendarButton
+                            width: 30
+                            height: 30
+                            radius: Theme.cornerRadius
+                            activeFocusOnTab: true
+                            color: calendarArea.containsMouse ? Theme.withAlpha(Theme.primary, 0.2) : Theme.withAlpha(Theme.primary, 0.11)
+                            Keys.onReturnPressed: popoutColumn.openCalendar()
+                            Keys.onPressed: event => {
+                                if (event.key === Qt.Key_Space) {
+                                    popoutColumn.openCalendar()
+                                    event.accepted = true
+                                }
+                            }
+
+                            DankIcon {
+                                anchors.centerIn: parent
+                                name: "calendar_month"
+                                size: 17
+                                color: Theme.primary
+                            }
+
+                            MouseArea {
+                                id: calendarArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                ToolTip.visible: containsMouse
+                                ToolTip.delay: 800
+                                ToolTip.text: "Schedule"
+                                onClicked: popoutColumn.openCalendar()
+                            }
                         }
                     }
 
