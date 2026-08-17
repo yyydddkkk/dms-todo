@@ -1049,8 +1049,12 @@ PluginComponent {
                 property string addingChildOfId: ""
                 property string editingId: ""
                 property string composePriority: ""
+                property string composeDueTime: ""
                 property var composeReminderMinutes: null
                 property string composeRecurrence: ""
+                property bool timePickerOpen: false
+                property int timePickerHour: 9
+                property int timePickerMinute: 0
                 property string editorReturnPage: "main"
                 property bool editorOpen: false
                 property bool trashOpen: false
@@ -1065,12 +1069,62 @@ PluginComponent {
 
                 function resetMetadata() {
                     dueDateInput.text = ""
-                    dueTimeInput.text = ""
+                    composeDueTime = ""
                     tagsInput.text = ""
                     composePriority = ""
                     composeReminderMinutes = null
                     composeRecurrence = ""
                     datePickerOpen = false
+                    timePickerOpen = false
+                }
+
+                function padTimePart(value) {
+                    const number = Math.max(0, Number(value) || 0)
+                    return number < 10 ? ("0" + number) : String(number)
+                }
+
+                function openTimePicker() {
+                    const normalized = root.normalizeDueTime(composeDueTime)
+                    if (normalized) {
+                        const parts = normalized.split(":")
+                        timePickerHour = Number(parts[0])
+                        timePickerMinute = Number(parts[1])
+                    } else {
+                        const now = new Date()
+                        let roundedMinute = Math.ceil(now.getMinutes() / 5) * 5
+                        let hour = now.getHours()
+                        if (roundedMinute >= 60) {
+                            roundedMinute = 0
+                            hour = (hour + 1) % 24
+                        }
+                        timePickerHour = hour
+                        timePickerMinute = roundedMinute
+                    }
+                    datePickerOpen = false
+                    timePickerOpen = true
+                }
+
+                function shiftTimePicker(minutes) {
+                    let total = timePickerHour * 60 + timePickerMinute + minutes
+                    total = ((total % 1440) + 1440) % 1440
+                    timePickerHour = Math.floor(total / 60)
+                    timePickerMinute = total % 60
+                }
+
+                function confirmTimePicker() {
+                    composeDueTime = padTimePart(timePickerHour) + ":" + padTimePart(timePickerMinute)
+                    timePickerOpen = false
+                }
+
+                function clearTimePicker() {
+                    composeDueTime = ""
+                    composeReminderMinutes = null
+                    timePickerOpen = false
+                }
+
+                function toggleDatePicker() {
+                    timePickerOpen = false
+                    datePickerOpen = !datePickerOpen
                 }
 
                 function finishEditor() {
@@ -1125,7 +1179,7 @@ PluginComponent {
                     editingId = id
                     addInput.text = t.text
                     dueDateInput.text = t.dueDate || ""
-                    dueTimeInput.text = t.dueTime || ""
+                    composeDueTime = t.dueTime || ""
                     tagsInput.text = t.tags ? t.tags.join(", ") : ""
                     composePriority = t.priority || ""
                     composeReminderMinutes = t.reminderMinutes === undefined ? null : t.reminderMinutes
@@ -1190,13 +1244,7 @@ PluginComponent {
                         dueDateInput.forceActiveFocus()
                         return false
                     }
-                    if (String(dueTimeInput.text || "").trim() && !root.normalizeDueTime(dueTimeInput.text)) {
-                        if (typeof ToastService !== "undefined")
-                            ToastService.showWarning("Use a valid time in HH:mm format")
-                        dueTimeInput.forceActiveFocus()
-                        return false
-                    }
-                    if (String(dueTimeInput.text || "").trim() && !root.normalizeDueDate(dueDateInput.text)) {
+                    if (composeDueTime && !root.normalizeDueDate(dueDateInput.text)) {
                         if (typeof ToastService !== "undefined")
                             ToastService.showWarning("Choose a date before adding a time")
                         dueDateInput.forceActiveFocus()
@@ -1207,7 +1255,7 @@ PluginComponent {
                         const newText = addInput.text
                         const ok = root.editTodoDetails(id, newText, {
                             dueDate: dueDateInput.text,
-                            dueTime: dueTimeInput.text,
+                            dueTime: composeDueTime,
                             reminderMinutes: composeReminderMinutes,
                             recurrence: composeRecurrence,
                             priority: composePriority,
@@ -1223,7 +1271,7 @@ PluginComponent {
                     }
                     if (root.addTodo(addInput.text, addingChildOfId || null, {
                         dueDate: dueDateInput.text,
-                        dueTime: dueTimeInput.text,
+                        dueTime: composeDueTime,
                         reminderMinutes: composeReminderMinutes,
                         recurrence: composeRecurrence,
                         priority: composePriority,
@@ -1493,10 +1541,10 @@ PluginComponent {
                                 color: datePickerArea.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
                                 border.width: 1
                                 border.color: activeFocus || popoutColumn.datePickerOpen ? Theme.primary : Theme.outlineVariant
-                                Keys.onReturnPressed: popoutColumn.datePickerOpen = !popoutColumn.datePickerOpen
+                                Keys.onReturnPressed: popoutColumn.toggleDatePicker()
                                 Keys.onPressed: event => {
                                     if (event.key === Qt.Key_Space) {
-                                        popoutColumn.datePickerOpen = !popoutColumn.datePickerOpen
+                                        popoutColumn.toggleDatePicker()
                                         event.accepted = true
                                     }
                                 }
@@ -1516,7 +1564,7 @@ PluginComponent {
                                     ToolTip.visible: containsMouse
                                     ToolTip.delay: 800
                                     ToolTip.text: "Choose date"
-                                    onClicked: popoutColumn.datePickerOpen = !popoutColumn.datePickerOpen
+                                    onClicked: popoutColumn.toggleDatePicker()
                                 }
                             }
                         }
@@ -1551,13 +1599,138 @@ PluginComponent {
                             color: Theme.surfaceVariantText
                         }
 
-                        DankTextField {
-                            id: dueTimeInput
+                        Rectangle {
+                            id: timePickerButton
                             width: parent.width
-                            placeholderText: "HH:mm (optional)"
-                            onTextChanged: {
-                                if (!String(text || "").trim())
-                                    popoutColumn.composeReminderMinutes = null
+                            height: 40
+                            radius: Theme.cornerRadius
+                            color: timePickerArea.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+                            border.width: 1
+                            border.color: popoutColumn.timePickerOpen ? Theme.primary : Theme.outlineVariant
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.leftMargin: Theme.spacingM
+                                anchors.rightMargin: Theme.spacingM
+                                spacing: Theme.spacingS
+
+                                DankIcon {
+                                    name: "schedule"
+                                    size: 18
+                                    color: popoutColumn.composeDueTime ? Theme.primary : Theme.surfaceVariantText
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                StyledText {
+                                    width: parent.width - 18 - 18 - parent.spacing * 2
+                                    text: popoutColumn.composeDueTime || "All day"
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: popoutColumn.composeDueTime ? Theme.surfaceText : Theme.surfaceVariantText
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                DankIcon {
+                                    name: popoutColumn.timePickerOpen ? "expand_less" : "expand_more"
+                                    size: 18
+                                    color: Theme.surfaceVariantText
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+
+                            MouseArea {
+                                id: timePickerArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (popoutColumn.timePickerOpen)
+                                        popoutColumn.timePickerOpen = false
+                                    else
+                                        popoutColumn.openTimePicker()
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            width: parent.width
+                            height: popoutColumn.timePickerOpen ? 104 : 0
+                            visible: popoutColumn.timePickerOpen
+                            radius: Theme.cornerRadius
+                            color: Theme.surfaceContainerHigh
+
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: Theme.spacingM
+
+                                DankNumberStepper {
+                                    text: popoutColumn.padTimePart(popoutColumn.timePickerHour)
+                                    textSize: Theme.fontSizeMedium
+                                    onIncrement: () => popoutColumn.shiftTimePicker(60)
+                                    onDecrement: () => popoutColumn.shiftTimePicker(-60)
+                                }
+
+                                StyledText {
+                                    text: ":"
+                                    font.pixelSize: Theme.fontSizeLarge
+                                    color: Theme.surfaceText
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                DankNumberStepper {
+                                    text: popoutColumn.padTimePart(popoutColumn.timePickerMinute)
+                                    textSize: Theme.fontSizeMedium
+                                    onIncrement: () => popoutColumn.shiftTimePicker(5)
+                                    onDecrement: () => popoutColumn.shiftTimePicker(-5)
+                                }
+
+                                Column {
+                                    spacing: Theme.spacingXS
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Rectangle {
+                                        width: 72
+                                        height: 32
+                                        radius: Theme.cornerRadius
+                                        color: timeDoneArea.containsMouse ? Theme.primaryHover : Theme.primary
+
+                                        StyledText {
+                                            anchors.centerIn: parent
+                                            text: "Done"
+                                            font.pixelSize: Theme.fontSizeSmall
+                                            color: Theme.onPrimary
+                                        }
+
+                                        MouseArea {
+                                            id: timeDoneArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: popoutColumn.confirmTimePicker()
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        width: 72
+                                        height: 28
+                                        radius: Theme.cornerRadius
+                                        color: allDayArea.containsMouse ? Theme.surfaceContainerHighest : "transparent"
+
+                                        StyledText {
+                                            anchors.centerIn: parent
+                                            text: "All day"
+                                            font.pixelSize: Theme.fontSizeSmall
+                                            color: Theme.surfaceVariantText
+                                        }
+
+                                        MouseArea {
+                                            id: allDayArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: popoutColumn.clearTimePicker()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1565,7 +1738,7 @@ PluginComponent {
                     Column {
                         width: parent.width
                         spacing: 5
-                        visible: Boolean(root.normalizeDueTime(dueTimeInput.text))
+                        visible: Boolean(root.normalizeDueTime(popoutColumn.composeDueTime))
 
                         StyledText {
                             text: "Reminder"
