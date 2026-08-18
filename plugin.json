@@ -2,7 +2,7 @@
     "id": "dankTodo",
     "name": "Dank Todo",
     "description": "A local-first task manager with Markdown export, schedules, reminders, and an expanded task view",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "license": "MIT",
     "author": "Deepu K Sasidharan, yyydddkkk",
     "icon": "checklist",

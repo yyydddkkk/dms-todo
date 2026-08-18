@@ -76,7 +76,7 @@ Expand **Completed** to filter its independent list by the current week, previou
 
 Use the `open_in_full` icon at the bottom-right of the popout to open an expanded floating Todo card. Active and Completed remain visually separate and scroll independently; Completed keeps its current-week, previous-week, current-month, and custom calendar-range filters. Press **Escape**, click outside the card, or use the close icon to leave it. Task creation and full metadata editing remain in the compact popout.
 
-Use the download icon in the expanded card header to export every non-trash task as Markdown. Exports are written to `~/Documents/dank-todo-YYYY-MM-DD-HHmm.md`, grouped into Not started, In progress, and Completed sections. The export includes details, dates, priorities, tags, completion timestamps, and subtask relationships.
+Use the download icon in either the compact card's bottom-right toolbar or the expanded card header to export every non-trash task as Markdown. Exports are written to `~/Documents/dank-todo-YYYY-MM-DD-HHmm.md`, grouped into Not started, In progress, and Completed sections. The export includes details, dates, priorities, tags, completion timestamps, and subtask relationships.
 
 Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
 

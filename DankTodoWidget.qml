@@ -2958,6 +2958,39 @@ PluginComponent {
                         visible: !popoutColumn.trashOpen
 
                         Rectangle {
+                            width: 30
+                            height: 30
+                            radius: Theme.cornerRadius
+                            activeFocusOnTab: true
+                            color: "transparent"
+                            Keys.onReturnPressed: root.exportMarkdown()
+                            Keys.onPressed: event => {
+                                if (event.key === Qt.Key_Space) {
+                                    root.exportMarkdown()
+                                    event.accepted = true
+                                }
+                            }
+
+                            DankIcon {
+                                anchors.centerIn: parent
+                                name: "download"
+                                size: 17
+                                color: exportArea.containsMouse ? Theme.primary : Theme.surfaceVariantText
+                            }
+
+                            MouseArea {
+                                id: exportArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                ToolTip.visible: containsMouse
+                                ToolTip.delay: 800
+                                ToolTip.text: "Export Markdown"
+                                onClicked: root.exportMarkdown()
+                            }
+                        }
+
+                        Rectangle {
                             id: sortButton
                             width: 30
                             height: 30
