@@ -13,6 +13,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 - Unified task page with active tasks first and a collapsed, independently scrollable Completed section below
 - Adaptive active-list height that shows roughly 10–13 tasks before scrolling, depending on screen height
 - Expanded floating task card with separately scrolling active/completed lists and completion-time filters
+- Markdown export grouped by task state with details, schedule metadata, tags, and hierarchy
 - Completed-task filtering for this week, last week, this month, or a custom inclusive date range
 - Trash is a separate page with restore, permanent-delete, and empty-trash actions
 - Due dates, priorities, and tags with inline editing
@@ -34,7 +35,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 ## Code structure
 
 - `DankTodoWidget.qml` — plugin entry, persistence, IPC, and page coordination
-- `TodoFullscreenV4.qml` — expanded floating card with separate active/completed lists and completion-period filters
+- `TodoFullscreenV5.qml` — expanded floating card with separate lists, completion-period filters, and Markdown export
 - `TodoTaskRowV7.qml` — active shared task row with solid-circle progress, right-click cancellation, compact schedule metadata, and overflow actions (older versions are retained for DMS cache compatibility)
 - `CompletedTasksSectionV6.qml` — active completed-task section with time filtering and its independent list (older versions are retained for cache compatibility)
 - `TodoCalendarGrid.qml` — reusable month grid for date selection and schedule views
@@ -75,6 +76,8 @@ Expand **Completed** to filter its independent list by the current week, previou
 
 Use the `open_in_full` icon at the bottom-right of the popout to open an expanded floating Todo card. Active and Completed remain visually separate and scroll independently; Completed keeps its current-week, previous-week, current-month, and custom calendar-range filters. Press **Escape**, click outside the card, or use the close icon to leave it. Task creation and full metadata editing remain in the compact popout.
 
+Use the download icon in the expanded card header to export every non-trash task as Markdown. Exports are written to `~/Documents/dank-todo-YYYY-MM-DD-HHmm.md`, grouped into Not started, In progress, and Completed sections. The export includes details, dates, priorities, tags, completion timestamps, and subtask relationships.
+
 Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
 
 - **Edit** — populates the main input with the row's text and switches to "Editing: …" mode. Enter saves, Escape (or the × on the chip) cancels.
@@ -103,6 +106,7 @@ A blue line marks sibling drops; a tinted background marks child drops. Dropping
 dms ipc call dankTodo add "Buy milk"
 dms ipc call dankTodo openTaskCenter
 dms ipc call dankTodo closeTaskCenter
+dms ipc call dankTodo exportMarkdown
 dms ipc call dankTodo addChild "Whole milk" <parentId>
 dms ipc call dankTodo edit <id> "New text"
 dms ipc call dankTodo setDescription <id> "Remember lactose-free"

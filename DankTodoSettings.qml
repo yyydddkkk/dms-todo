@@ -20,7 +20,7 @@ PluginSettings {
 
     StyledText {
         width: parent.width
-        text: "A local-first task manager with an expanded floating task view, schedules, reminders, and recurring tasks"
+        text: "A local-first task manager with Markdown export, schedules, reminders, and an expanded task view"
         font.pixelSize: Theme.fontSizeSmall
         color: Theme.surfaceVariantText
         wrapMode: Text.WordWrap
@@ -249,7 +249,7 @@ PluginSettings {
 
             StyledText {
                 width: parent.width
-                text: "dms ipc call dankTodo openTaskCenter\ndms ipc call dankTodo closeTaskCenter\ndms ipc call dankTodo add \"Buy milk\"\ndms ipc call dankTodo setDescription <id> \"Remember lactose-free\"\ndms ipc call dankTodo setDetails <id> 2026-08-17 high work,urgent\ndms ipc call dankTodo setSchedule <id> 2026-08-17 09:00 10 weekly\ndms ipc call dankTodo toggle <id>\ndms ipc call dankTodo cancelProgress <id>\ndms ipc call dankTodo snooze <id>\ndms ipc call dankTodo remove <id>\ndms ipc call dankTodo restore <id>\ndms ipc call dankTodo purge <id>\ndms ipc call dankTodo emptyTrash\ndms ipc call dankTodo list\ndms ipc call dankTodo count"
+                text: "dms ipc call dankTodo openTaskCenter\ndms ipc call dankTodo closeTaskCenter\ndms ipc call dankTodo exportMarkdown\ndms ipc call dankTodo add \"Buy milk\"\ndms ipc call dankTodo setDescription <id> \"Remember lactose-free\"\ndms ipc call dankTodo setDetails <id> 2026-08-17 high work,urgent\ndms ipc call dankTodo setSchedule <id> 2026-08-17 09:00 10 weekly\ndms ipc call dankTodo toggle <id>\ndms ipc call dankTodo cancelProgress <id>\ndms ipc call dankTodo snooze <id>\ndms ipc call dankTodo remove <id>\ndms ipc call dankTodo restore <id>\ndms ipc call dankTodo purge <id>\ndms ipc call dankTodo emptyTrash\ndms ipc call dankTodo list\ndms ipc call dankTodo count"
                 font.pixelSize: Theme.fontSizeSmall
                 font.family: "monospace"
                 color: Theme.surfaceVariantText

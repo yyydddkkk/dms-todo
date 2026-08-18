@@ -17,6 +17,8 @@ PluginComponent {
         return custom.length > 0 ? custom : defaultStorageDir
     }
     readonly property string storageFilePath: resolvedStorageDir + "/todos.json"
+    readonly property string exportDirectory: (Quickshell.env("XDG_DOCUMENTS_DIR") || (Quickshell.env("HOME") + "/Documents")).replace(/^\$HOME/, Quickshell.env("HOME"))
+    property string lastExportPath: ""
 
     function parseIntOr(value, fallback, min) {
         const n = parseInt(value, 10)
@@ -398,6 +400,100 @@ PluginComponent {
     function reloadTodos() {
         ensureStorageReady()
         todoFile.reload()
+    }
+
+    function markdownInline(value) {
+        return String(value || "")
+            .replace(/\\/g, "\\\\")
+            .replace(/`/g, "\\`")
+            .replace(/\*/g, "\\*")
+            .replace(/_/g, "\\_")
+            .replace(/\[/g, "\\[")
+            .replace(/\]/g, "\\]")
+            .replace(/[\r\n]+/g, " ")
+            .trim()
+    }
+
+    function markdownTask(todo, sectionIds) {
+        let exportDepth = 0
+        let parent = todo.parentId ? todos.find(candidate => candidate.id === todo.parentId) : null
+        let ancestor = parent
+        while (ancestor && sectionIds.has(ancestor.id) && exportDepth < 16) {
+            exportDepth++
+            ancestor = ancestor.parentId ? todos.find(candidate => candidate.id === ancestor.parentId) : null
+        }
+        const indent = "  ".repeat(exportDepth)
+        const checkbox = todo.completed ? "[x]" : "[ ]"
+        const statusPrefix = todo.inProgress && !todo.completed ? "(In progress) " : ""
+        const lines = [indent + "- " + checkbox + " " + statusPrefix + markdownInline(todo.text)]
+        const metadata = []
+        if (todo.dueDate)
+            metadata.push("Due: " + todo.dueDate + (todo.dueTime ? (" " + todo.dueTime) : ""))
+        if (todo.priority)
+            metadata.push("Priority: " + todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1))
+        if (todo.tags && todo.tags.length)
+            metadata.push("Tags: " + todo.tags.map(tag => "#" + markdownInline(tag)).join(" "))
+        if (parent && !sectionIds.has(parent.id))
+            metadata.push("Parent: " + markdownInline(parent.text))
+        if (todo.completedAt)
+            metadata.push("Completed: " + Qt.formatDateTime(new Date(todo.completedAt), "yyyy-MM-dd HH:mm"))
+        if (metadata.length)
+            lines.push(indent + "  - " + metadata.join(" · "))
+        const description = normalizeDescription(todo.description)
+        if (description) {
+            const descriptionLines = description.split("\n")
+            for (let i = 0; i < descriptionLines.length; i++)
+                lines.push(indent + "  > " + descriptionLines[i])
+        }
+        return lines.join("\n")
+    }
+
+    function buildMarkdownExport() {
+        revision
+        const now = new Date()
+        const visible = todos.filter(todo => !todo.deletedAt)
+        const pending = visible.filter(todo => !todo.completed && !todo.inProgress)
+        const progressing = visible.filter(todo => !todo.completed && todo.inProgress)
+        const completed = visible.filter(todo => todo.completed)
+        const sections = [
+            { title: "Not started", tasks: pending },
+            { title: "In progress", tasks: progressing },
+            { title: "Completed", tasks: completed }
+        ]
+        const lines = [
+            "# Dank Todo Export",
+            "",
+            "Exported: " + Qt.formatDateTime(now, "yyyy-MM-dd HH:mm"),
+            "",
+            "Total: " + visible.length + " · Active: " + (pending.length + progressing.length) + " · Completed: " + completed.length
+        ]
+        for (let i = 0; i < sections.length; i++) {
+            const section = sections[i]
+            lines.push("", "## " + section.title + " (" + section.tasks.length + ")", "")
+            if (!section.tasks.length) {
+                lines.push("No tasks.")
+                continue
+            }
+            const sectionIds = new Set(section.tasks.map(todo => todo.id))
+            for (let j = 0; j < section.tasks.length; j++) {
+                lines.push(markdownTask(section.tasks[j], sectionIds))
+                if (j < section.tasks.length - 1)
+                    lines.push("")
+            }
+        }
+        lines.push("")
+        return lines.join("\n")
+    }
+
+    function exportMarkdown() {
+        const now = new Date()
+        const pad = value => String(value).padStart(2, "0")
+        const filename = "dank-todo-" + localDateKey(now) + "-" + pad(now.getHours()) + pad(now.getMinutes()) + ".md"
+        lastExportPath = exportDirectory + "/" + filename
+        Quickshell.execDetached(["mkdir", "-p", exportDirectory])
+        exportFile.path = lastExportPath
+        Qt.callLater(() => exportFile.setText(buildMarkdownExport()))
+        return lastExportPath
     }
 
     function openFullscreen() {
@@ -1070,6 +1166,24 @@ PluginComponent {
         }
     }
 
+    FileView {
+        id: exportFile
+        preload: false
+        blockWrites: false
+        atomicWrites: true
+        printErrors: false
+
+        onSaved: {
+            if (typeof ToastService !== "undefined")
+                ToastService.showInfo("Markdown export saved", root.lastExportPath)
+        }
+
+        onSaveFailed: error => {
+            if (typeof ToastService !== "undefined")
+                ToastService.showError("Couldn't export Markdown", root.lastExportPath)
+        }
+    }
+
     IpcHandler {
         target: "dankTodo"
 
@@ -1194,6 +1308,10 @@ PluginComponent {
             root.closeFullscreen()
             return "OK"
         }
+
+        function exportMarkdown(): string {
+            return root.exportMarkdown()
+        }
     }
 
     Process {
@@ -1213,7 +1331,7 @@ PluginComponent {
 
     Component.onCompleted: reloadTodos()
 
-    TodoFullscreenV4 {
+    TodoFullscreenV5 {
         pluginRoot: root
         targetScreen: root.parentScreen
         shown: root.fullscreenOpen

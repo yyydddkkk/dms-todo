@@ -32,7 +32,7 @@ The main files shipped with the plugin are:
 | --------------------- | -------------------------------------------------------- |
 | `plugin.json`         | DMS manifest. `capabilities: ["dankbar-widget"]` is what makes it show up in the Plugins tab. |
 | `DankTodoWidget.qml`  | `PluginComponent` root — bar pill, popout, data model, persistence, IPC. |
-| `TodoFullscreenV4.qml` | Expanded floating PanelWindow card with separately scrolling active/completed lists and completion-period filters. |
+| `TodoFullscreenV5.qml` | Expanded floating PanelWindow card with separately scrolling lists, completion-period filters, and Markdown export. |
 | `DankTodoSettings.qml`| `PluginSettings` root — storage path, pill count mode, limits, IPC hints. |
 | `TodoCalendarGrid.qml`| Reusable themed month grid used by the task editor and schedule page. |
 | `TodoTaskRowV7.qml`   | Active shared task-row visual, solid-circle progress control with right-click cancellation, schedule metadata, whole-row drag, and overflow actions. Older versions are retained temporarily to avoid stale DMS type caches. |
