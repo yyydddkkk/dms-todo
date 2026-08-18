@@ -286,6 +286,7 @@ PluginComponent {
             text: todo.text,
             description: normalizeDescription(todo.description),
             completed: false,
+            inProgress: false,
             parentId: todo.parentId || null,
             createdAt: new Date().toISOString(),
             dueDate: nextDate,
@@ -664,6 +665,7 @@ PluginComponent {
             text: trimmed.substring(0, maxTextLength),
             description: normalizeDescription(meta.description),
             completed: false,
+            inProgress: false,
             parentId: parentId || null,
             createdAt: new Date().toISOString(),
             dueDate: dueDate,
@@ -701,12 +703,16 @@ PluginComponent {
         const next = todos.slice()
         const wasCompleted = Boolean(next[idx].completed)
         const source = next[idx]
+        const wasInProgress = !wasCompleted && Boolean(source.inProgress)
+        const nextCompleted = !wasCompleted && wasInProgress
+        const nextInProgress = !wasCompleted && !wasInProgress
         next[idx] = Object.assign({}, source, {
-            completed: !wasCompleted,
-            completedAt: !wasCompleted ? new Date().toISOString() : undefined,
-            reminderState: !wasCompleted ? {} : (source.reminderState || {})
+            completed: nextCompleted,
+            inProgress: nextInProgress,
+            completedAt: nextCompleted ? new Date().toISOString() : undefined,
+            reminderState: nextCompleted ? {} : (source.reminderState || {})
         })
-        if (!wasCompleted && source.recurrence && source.dueDate && !source.nextRecurrenceId) {
+        if (nextCompleted && source.recurrence && source.dueDate && !source.nextRecurrenceId) {
             const successor = recurringSuccessor(source)
             if (successor) {
                 next[idx] = Object.assign({}, next[idx], { nextRecurrenceId: successor.id })
@@ -999,6 +1005,7 @@ PluginComponent {
                     text: String(t.text).substring(0, root.maxTextLength),
                     description: root.normalizeDescription(t.description),
                     completed: Boolean(t.completed),
+                    inProgress: !Boolean(t.completed) && Boolean(t.inProgress),
                     parentId: t.parentId || null,
                     createdAt: t.createdAt || new Date().toISOString(),
                     completedAt: t.completedAt,
@@ -2440,7 +2447,7 @@ PluginComponent {
                                 property var taskObject: modelData
                                 property string taskTitle: String(modelData && modelData.text !== undefined ? modelData.text : "")
 
-                                TodoTaskRowV4 {
+                                TodoTaskRowV5 {
                                     id: calendarRow
                                     anchors.fill: parent
                                     pluginRoot: root
@@ -2594,7 +2601,7 @@ PluginComponent {
                                 Drag.hotSpot.x: dragProxy.width / 2
                                 Drag.hotSpot.y: dragProxy.height / 2
 
-                                TodoTaskRowV4 {
+                                TodoTaskRowV5 {
                                     id: taskRow
                                     x: slot.depth * listContainer.indentStep
                                     width: dragProxy.width - x

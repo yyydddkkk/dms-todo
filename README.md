@@ -8,7 +8,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 
 - Dedicated create/edit page opened from the main list
 - Optional multiline task details, kept out of the compact task rows
-- One-click toggle between active/completed
+- Three-state task cycle: not started → in progress → completed
 - Per-item delete (cascades to subtasks) and "Clear completed" both soft-delete items in storage
 - Unified task page with active tasks first and a collapsed, independently scrollable Completed section below
 - Adaptive active-list height that shows roughly 10–13 tasks before scrolling, depending on screen height
@@ -33,7 +33,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 ## Code structure
 
 - `DankTodoWidget.qml` — plugin entry, persistence, IPC, and page coordination
-- `TodoTaskRowV4.qml` — active shared task row with compact schedule metadata and overflow actions (older versions are retained for DMS cache compatibility)
+- `TodoTaskRowV5.qml` — active shared task row with three-state progress, compact schedule metadata, and overflow actions (older versions are retained for DMS cache compatibility)
 - `CompletedTasksSectionV6.qml` — active completed-task section with time filtering and its independent list (older versions are retained for cache compatibility)
 - `TodoCalendarGrid.qml` — reusable month grid for date selection and schedule views
 - `TodoUtils.js` — pure date, priority, and tag helpers
@@ -65,7 +65,7 @@ Then in DMS Settings → Plugins, click "Scan for Plugins" and enable **Dank Tod
 
 ## Usage
 
-Click the pill in the bar to open the popout. The main page is dedicated to browsing and searching tasks. Click the **+** button beside search to open the separate creation page, enter a title and optional multiline details, date, time, reminder, recurrence, priority, and tags, then save. The schedule page also has a **+** action that preselects the visible date. Click the circle to toggle, the trash icon to delete, or "Clear completed" to move done items to Trash. Deleted tasks can be restored or permanently removed from the Trash view. Search matches titles, details, and tags while keeping details out of the compact list rows.
+Click the pill in the bar to open the popout. The main page is dedicated to browsing and searching tasks. Click the **+** button beside search to open the separate creation page, enter a title and optional multiline details, date, time, reminder, recurrence, priority, and tags, then save. The schedule page also has a **+** action that preselects the visible date. Click a task's state circle once to mark it in progress (a short bar), again to complete it, and again to reset it to not started. Use the trash action to delete, or "Clear completed" to move done items to Trash. Deleted tasks can be restored or permanently removed from the Trash view. Search matches titles, details, and tags while keeping details out of the compact list rows.
 
 All-day tasks do not send notifications. Timed tasks can remind at the due time or in advance. After a reminder fires, use **Snooze 10 minutes** in the task menu to postpone it. Completing a recurring task keeps the completed occurrence and creates the next future occurrence on the original cadence.
 
@@ -142,6 +142,7 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
       "text": "Shopping",
       "description": "Check the weekly list before leaving.",
       "completed": false,
+      "inProgress": true,
       "parentId": null,
       "createdAt": "2026-04-22T14:00:00.000Z",
       "dueDate": "2026-04-23",
@@ -163,7 +164,7 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
 }
 ```
 
-Array order is the manual display order; `parentId: null` means top-level. Details are optional plain text with preserved line breaks. Due-date and priority sorting affect only the rendered active list and preserve that manual order. Soft-deleted items are retained with `deletedAt`, hidden from normal views and available in Trash. The loader migrates older version 1–3 data automatically; missing details, schedule fields, priorities, tags, and preferences receive safe defaults. Reminder state is persisted so plugin reloads do not duplicate notifications.
+Array order is the manual display order; `parentId: null` means top-level. `inProgress` is only true for the intermediate state and is forced false for completed tasks. Details are optional plain text with preserved line breaks. Due-date and priority sorting affect only the rendered active list and preserve that manual order. Soft-deleted items are retained with `deletedAt`, hidden from normal views and available in Trash. The loader migrates older version 1–3 data automatically; missing status, details, schedule fields, priorities, tags, and preferences receive safe defaults. Reminder state is persisted so plugin reloads do not duplicate notifications.
 
 ## Requirements
 
