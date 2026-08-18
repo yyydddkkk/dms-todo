@@ -20,7 +20,7 @@ PluginSettings {
 
     StyledText {
         width: parent.width
-        text: "A local-first task manager with a fullscreen task center, schedules, reminders, and recurring tasks"
+        text: "A local-first task manager with an expanded floating task view, schedules, reminders, and recurring tasks"
         font.pixelSize: Theme.fontSizeSmall
         color: Theme.surfaceVariantText
         wrapMode: Text.WordWrap

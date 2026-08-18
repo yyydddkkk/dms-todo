@@ -1,8 +1,8 @@
 {
     "id": "dankTodo",
     "name": "Dank Todo",
-    "description": "A local-first task manager with a fullscreen task center, schedules, reminders, and recurring tasks",
-    "version": "2.6.0",
+    "description": "A local-first task manager with an expanded floating task view, schedules, reminders, and recurring tasks",
+    "version": "2.6.1",
     "license": "MIT",
     "author": "Deepu K Sasidharan, yyydddkkk",
     "icon": "checklist",

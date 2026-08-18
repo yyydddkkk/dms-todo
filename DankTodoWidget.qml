@@ -1213,7 +1213,7 @@ PluginComponent {
 
     Component.onCompleted: reloadTodos()
 
-    TodoFullscreenV2 {
+    TodoFullscreenV4 {
         pluginRoot: root
         targetScreen: root.parentScreen
         shown: root.fullscreenOpen

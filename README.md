@@ -12,7 +12,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 - Per-item delete (cascades to subtasks) and "Clear completed" both soft-delete items in storage
 - Unified task page with active tasks first and a collapsed, independently scrollable Completed section below
 - Adaptive active-list height that shows roughly 10–13 tasks before scrolling, depending on screen height
-- Fullscreen task center with status navigation, full-height lists, search, task details, and management actions
+- Expanded floating task card with separately scrolling active/completed lists and completion-time filters
 - Completed-task filtering for this week, last week, this month, or a custom inclusive date range
 - Trash is a separate page with restore, permanent-delete, and empty-trash actions
 - Due dates, priorities, and tags with inline editing
@@ -34,7 +34,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 ## Code structure
 
 - `DankTodoWidget.qml` — plugin entry, persistence, IPC, and page coordination
-- `TodoFullscreenV2.qml` — fullscreen Workbench view with status navigation, task list, details, and completion-period filters
+- `TodoFullscreenV4.qml` — expanded floating card with separate active/completed lists and completion-period filters
 - `TodoTaskRowV7.qml` — active shared task row with solid-circle progress, right-click cancellation, compact schedule metadata, and overflow actions (older versions are retained for DMS cache compatibility)
 - `CompletedTasksSectionV6.qml` — active completed-task section with time filtering and its independent list (older versions are retained for cache compatibility)
 - `TodoCalendarGrid.qml` — reusable month grid for date selection and schedule views
@@ -73,7 +73,7 @@ All-day tasks do not send notifications. Timed tasks can remind at the due time 
 
 Expand **Completed** to filter its independent list by the current week, previous week, current month, or a custom inclusive date range. Custom ranges use calendar pickers and initially cover the most recent seven days. Completed tasks are shown newest first; legacy items without a completion timestamp remain available under **All**.
 
-Use the `open_in_full` icon at the bottom-right of the popout to open the fullscreen **Task center**. Its left rail switches between all, not-started, in-progress, completed, and trash views; the middle list uses the full available height; the right pane shows the selected task's details and status actions. Completed filtering and custom calendar ranges are available in the fullscreen view. Press **Escape** or the close icon to leave it. Task creation and full metadata editing remain in the compact popout.
+Use the `open_in_full` icon at the bottom-right of the popout to open an expanded floating Todo card. Active and Completed remain visually separate and scroll independently; Completed keeps its current-week, previous-week, current-month, and custom calendar-range filters. Press **Escape**, click outside the card, or use the close icon to leave it. Task creation and full metadata editing remain in the compact popout.
 
 Each row also has edit (`✎`) and subtask (`⤵`) buttons next to delete:
 
