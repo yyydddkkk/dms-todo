@@ -33,7 +33,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 ## Code structure
 
 - `DankTodoWidget.qml` — plugin entry, persistence, IPC, and page coordination
-- `TodoTaskRowV6.qml` — active shared task row with three-state progress, right-click cancellation, compact schedule metadata, and overflow actions (older versions are retained for DMS cache compatibility)
+- `TodoTaskRowV7.qml` — active shared task row with solid-circle progress, right-click cancellation, compact schedule metadata, and overflow actions (older versions are retained for DMS cache compatibility)
 - `CompletedTasksSectionV6.qml` — active completed-task section with time filtering and its independent list (older versions are retained for cache compatibility)
 - `TodoCalendarGrid.qml` — reusable month grid for date selection and schedule views
 - `TodoUtils.js` — pure date, priority, and tag helpers
@@ -65,7 +65,7 @@ Then in DMS Settings → Plugins, click "Scan for Plugins" and enable **Dank Tod
 
 ## Usage
 
-Click the pill in the bar to open the popout. The main page is dedicated to browsing and searching tasks. Click the **+** button beside search to open the separate creation page, enter a title and optional multiline details, date, time, reminder, recurrence, priority, and tags, then save. The schedule page also has a **+** action that preselects the visible date. Left-click a task's state circle once to mark it in progress (a short bar), again to complete it, and again to reset it to not started. Right-click the state circle while it is in progress to cancel progress and return to not started. Use the trash action to delete, or "Clear completed" to move done items to Trash. Deleted tasks can be restored or permanently removed from the Trash view. Search matches titles, details, and tags while keeping details out of the compact list rows.
+Click the pill in the bar to open the popout. The main page is dedicated to browsing and searching tasks. Click the **+** button beside search to open the separate creation page, enter a title and optional multiline details, date, time, reminder, recurrence, priority, and tags, then save. The schedule page also has a **+** action that preselects the visible date. Left-click a task's state circle once to mark it in progress (a solid circle), again to complete it, and again to reset it to not started. Right-click the state circle while it is in progress to cancel progress and return to not started. Use the trash action to delete, or "Clear completed" to move done items to Trash. Deleted tasks can be restored or permanently removed from the Trash view. Search matches titles, details, and tags while keeping details out of the compact list rows.
 
 All-day tasks do not send notifications. Timed tasks can remind at the due time or in advance. After a reminder fires, use **Snooze 10 minutes** in the task menu to postpone it. Completing a recurring task keeps the completed occurrence and creates the next future occurrence on the original cadence.
 

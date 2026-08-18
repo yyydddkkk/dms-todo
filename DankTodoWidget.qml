@@ -2463,7 +2463,7 @@ PluginComponent {
                                 property var taskObject: modelData
                                 property string taskTitle: String(modelData && modelData.text !== undefined ? modelData.text : "")
 
-                                TodoTaskRowV6 {
+                                TodoTaskRowV7 {
                                     id: calendarRow
                                     anchors.fill: parent
                                     pluginRoot: root
@@ -2617,7 +2617,7 @@ PluginComponent {
                                 Drag.hotSpot.x: dragProxy.width / 2
                                 Drag.hotSpot.y: dragProxy.height / 2
 
-                                TodoTaskRowV6 {
+                                TodoTaskRowV7 {
                                     id: taskRow
                                     x: slot.depth * listContainer.indentStep
                                     width: dragProxy.width - x
