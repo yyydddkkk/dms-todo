@@ -36,6 +36,7 @@ PluginComponent {
     property var todos: []
     property int revision: 0
     property bool notificationAvailable: true
+    property bool fullscreenOpen: false
     property string filter: "all"
     property string searchQuery: ""
     property string sortMode: "manual"
@@ -397,6 +398,15 @@ PluginComponent {
     function reloadTodos() {
         ensureStorageReady()
         todoFile.reload()
+    }
+
+    function openFullscreen() {
+        closePopout()
+        fullscreenOpen = true
+    }
+
+    function closeFullscreen() {
+        fullscreenOpen = false
     }
 
     function normalizeSortMode(value) {
@@ -1174,6 +1184,16 @@ PluginComponent {
         function count(): string {
             return root.activeCount + "/" + root.visibleCount
         }
+
+        function openTaskCenter(): string {
+            root.openFullscreen()
+            return "OK"
+        }
+
+        function closeTaskCenter(): string {
+            root.closeFullscreen()
+            return "OK"
+        }
     }
 
     Process {
@@ -1192,6 +1212,13 @@ PluginComponent {
     }
 
     Component.onCompleted: reloadTodos()
+
+    TodoFullscreenV2 {
+        pluginRoot: root
+        targetScreen: root.parentScreen
+        shown: root.fullscreenOpen
+        onCloseRequested: root.closeFullscreen()
+    }
 
     horizontalBarPill: Component {
         Row {
@@ -2877,6 +2904,39 @@ PluginComponent {
                                 ToolTip.delay: 800
                                 ToolTip.text: "Schedule"
                                 onClicked: popoutColumn.openCalendar()
+                            }
+                        }
+
+                        Rectangle {
+                            width: 30
+                            height: 30
+                            radius: Theme.cornerRadius
+                            activeFocusOnTab: true
+                            color: "transparent"
+                            Keys.onReturnPressed: root.openFullscreen()
+                            Keys.onPressed: event => {
+                                if (event.key === Qt.Key_Space) {
+                                    root.openFullscreen()
+                                    event.accepted = true
+                                }
+                            }
+
+                            DankIcon {
+                                anchors.centerIn: parent
+                                name: "open_in_full"
+                                size: 17
+                                color: fullscreenArea.containsMouse ? Theme.primary : Theme.surfaceVariantText
+                            }
+
+                            MouseArea {
+                                id: fullscreenArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                ToolTip.visible: containsMouse
+                                ToolTip.delay: 800
+                                ToolTip.text: "Open task center"
+                                onClicked: root.openFullscreen()
                             }
                         }
                     }

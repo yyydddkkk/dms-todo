@@ -5,7 +5,7 @@
     "category": "productivity",
     "repo": "https://github.com/yyydddkkk/dms-todo",
     "author": "Deepu K Sasidharan, yyydddkkk",
-    "description": "A local-first task manager with details, schedules, reminders, recurring tasks, and calendar views.",
+    "description": "A local-first task manager with a fullscreen task center, schedules, reminders, and recurring tasks.",
     "dependencies": [],
     "compositors": ["any"],
     "distro": ["any"],
