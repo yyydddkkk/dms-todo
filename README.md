@@ -11,6 +11,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 - One-click toggle between active/completed
 - Per-item delete (cascades to subtasks) and "Clear completed" both soft-delete items in storage
 - Unified task page with active tasks first and a collapsed, independently scrollable Completed section below
+- Adaptive active-list height that shows roughly 10–13 tasks before scrolling, depending on screen height
 - Completed-task filtering for this week, last week, this month, or a custom inclusive date range
 - Trash is a separate page with restore, permanent-delete, and empty-trash actions
 - Due dates, priorities, and tags with inline editing

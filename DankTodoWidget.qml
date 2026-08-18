@@ -2520,7 +2520,11 @@ PluginComponent {
                 Item {
                     id: listContainer
                     width: parent.width
-                    height: Math.min(320, Math.max(48, todoList.contentHeight))
+                    readonly property real availableScreenHeight: popout.parentPopout && popout.parentPopout.screenHeight > 0 ? popout.parentPopout.screenHeight : 1080
+                    readonly property real collapsedListLimit: Math.min(640, Math.max(520, availableScreenHeight * 0.58))
+                    readonly property real expandedListLimit: Math.min(320, Math.max(240, availableScreenHeight * 0.25))
+                    readonly property real listHeightLimit: popoutColumn.completedExpanded ? expandedListLimit : collapsedListLimit
+                    height: Math.min(listHeightLimit, Math.max(48, todoList.contentHeight))
                     visible: !popoutColumn.editorOpen && !popoutColumn.calendarOpen
 
                     property string dragId: ""
