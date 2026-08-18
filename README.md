@@ -7,6 +7,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 ## Features
 
 - Dedicated create/edit page opened from the main list
+- Optional multiline task details, kept out of the compact task rows
 - One-click toggle between active/completed
 - Per-item delete (cascades to subtasks) and "Clear completed" both soft-delete items in storage
 - Unified task page with active tasks first and a collapsed, independently scrollable Completed section below
@@ -63,7 +64,7 @@ Then in DMS Settings → Plugins, click "Scan for Plugins" and enable **Dank Tod
 
 ## Usage
 
-Click the pill in the bar to open the popout. The main page is dedicated to browsing and searching tasks. Click the **+** button beside search to open the separate creation page, enter a title and optional date, time, reminder, recurrence, priority, and tags, then save. The schedule page also has a **+** action that preselects the visible date. Click the circle to toggle, the trash icon to delete, or "Clear completed" to move done items to Trash. Deleted tasks can be restored or permanently removed from the Trash view.
+Click the pill in the bar to open the popout. The main page is dedicated to browsing and searching tasks. Click the **+** button beside search to open the separate creation page, enter a title and optional multiline details, date, time, reminder, recurrence, priority, and tags, then save. The schedule page also has a **+** action that preselects the visible date. Click the circle to toggle, the trash icon to delete, or "Clear completed" to move done items to Trash. Deleted tasks can be restored or permanently removed from the Trash view. Search matches titles, details, and tags while keeping details out of the compact list rows.
 
 All-day tasks do not send notifications. Timed tasks can remind at the due time or in advance. After a reminder fires, use **Snooze 10 minutes** in the task menu to postpone it. Completing a recurring task keeps the completed occurrence and creates the next future occurrence on the original cadence.
 
@@ -97,6 +98,7 @@ A blue line marks sibling drops; a tinted background marks child drops. Dropping
 dms ipc call dankTodo add "Buy milk"
 dms ipc call dankTodo addChild "Whole milk" <parentId>
 dms ipc call dankTodo edit <id> "New text"
+dms ipc call dankTodo setDescription <id> "Remember lactose-free"
 dms ipc call dankTodo setDetails <id> 2026-08-17 high work,urgent
 dms ipc call dankTodo setSchedule <id> 2026-08-17 09:00 10 weekly
 dms ipc call dankTodo snooze <id>
@@ -137,6 +139,7 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
     {
       "id": "parent-1",
       "text": "Shopping",
+      "description": "Check the weekly list before leaving.",
       "completed": false,
       "parentId": null,
       "createdAt": "2026-04-22T14:00:00.000Z",
@@ -159,7 +162,7 @@ Todos are stored as plain JSON. Back it up or sync it however you like:
 }
 ```
 
-Array order is the manual display order; `parentId: null` means top-level. Due-date and priority sorting affect only the rendered active list and preserve that manual order. Soft-deleted items are retained with `deletedAt`, hidden from normal views and available in Trash. The loader migrates older version 1–3 data automatically; missing schedule fields, priorities, tags, and preferences receive safe defaults. Reminder state is persisted so plugin reloads do not duplicate notifications.
+Array order is the manual display order; `parentId: null` means top-level. Details are optional plain text with preserved line breaks. Due-date and priority sorting affect only the rendered active list and preserve that manual order. Soft-deleted items are retained with `deletedAt`, hidden from normal views and available in Trash. The loader migrates older version 1–3 data automatically; missing details, schedule fields, priorities, tags, and preferences receive safe defaults. Reminder state is persisted so plugin reloads do not duplicate notifications.
 
 ## Requirements
 

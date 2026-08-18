@@ -27,6 +27,7 @@ PluginComponent {
 
     property int maxItems: parseIntOr(pluginData.maxItems, 200, 10)
     property int maxTextLength: parseIntOr(pluginData.maxTextLength, 500, 40)
+    property int maxDescriptionLength: parseIntOr(pluginData.maxDescriptionLength, 4000, 100)
     property string countMode: {
         const v = String(pluginData.countMode || "active")
         return (v === "total" || v === "done" || v === "hidden") ? v : "active"
@@ -148,6 +149,10 @@ PluginComponent {
 
     function normalizeTags(value) {
         return TodoUtils.normalizeTags(value)
+    }
+
+    function normalizeDescription(value) {
+        return String(value || "").replace(/\r\n?/g, "\n").trim().substring(0, maxDescriptionLength)
     }
 
     function dueLabel(dueDate, dueTime) {
@@ -279,6 +284,7 @@ PluginComponent {
         return {
             id: uid(),
             text: todo.text,
+            description: normalizeDescription(todo.description),
             completed: false,
             parentId: todo.parentId || null,
             createdAt: new Date().toISOString(),
@@ -522,7 +528,7 @@ PluginComponent {
         if (query) {
             result = result.filter(t => {
                 const tags = t.tags ? t.tags.join(" ") : ""
-                return (String(t.text || "") + " " + tags).toLowerCase().indexOf(query) !== -1
+                return (String(t.text || "") + " " + String(t.description || "") + " " + tags).toLowerCase().indexOf(query) !== -1
             })
         }
         return filterKey === "active" ? sortedActiveTodos(result) : result
@@ -656,6 +662,7 @@ PluginComponent {
         const entry = {
             id: uid(),
             text: trimmed.substring(0, maxTextLength),
+            description: normalizeDescription(meta.description),
             completed: false,
             parentId: parentId || null,
             createdAt: new Date().toISOString(),
@@ -818,6 +825,20 @@ PluginComponent {
         saveTodos()
     }
 
+    function editTodoDescription(id, description) {
+        const idx = todos.findIndex(t => t.id === id && !t.deletedAt)
+        if (idx === -1)
+            return false
+        const next = todos.slice()
+        next[idx] = Object.assign({}, next[idx], {
+            description: normalizeDescription(description)
+        })
+        todos = next
+        revision++
+        saveTodos()
+        return true
+    }
+
     function editTodoDetails(id, newText, metadata) {
         const trimmed = String(newText || "").replace(/\s+/g, " ").trim()
         if (!trimmed.length)
@@ -838,6 +859,7 @@ PluginComponent {
         const next = todos.slice()
         next[idx] = Object.assign({}, current, {
             text: trimmed.substring(0, maxTextLength),
+            description: normalizeDescription(meta.description),
             dueDate: dueDate,
             dueTime: dueTime,
             reminderMinutes: reminderMinutes,
@@ -975,6 +997,7 @@ PluginComponent {
                 clean.push({
                     id: id,
                     text: String(t.text).substring(0, root.maxTextLength),
+                    description: root.normalizeDescription(t.description),
                     completed: Boolean(t.completed),
                     parentId: t.parentId || null,
                     createdAt: t.createdAt || new Date().toISOString(),
@@ -1046,6 +1069,7 @@ PluginComponent {
             if (!todo)
                 return "NOT_FOUND"
             root.editTodoDetails(id, todo.text, {
+                description: todo.description,
                 dueDate: dueDate,
                 dueTime: todo.dueTime,
                 reminderMinutes: todo.reminderMinutes,
@@ -1054,6 +1078,10 @@ PluginComponent {
                 tags: tags
             })
             return "OK"
+        }
+
+        function setDescription(id: string, description: string): string {
+            return root.editTodoDescription(id, description) ? "OK" : "NOT_FOUND"
         }
 
         function setSchedule(id: string, dueDate: string, dueTime: string, reminder: string, recurrence: string): string {
@@ -1067,6 +1095,7 @@ PluginComponent {
             if (dueTime !== "-" && !normalizedTime)
                 return "INVALID_TIME"
             root.editTodoDetails(id, todo.text, {
+                description: todo.description,
                 dueDate: normalizedDate,
                 dueTime: normalizedTime,
                 reminderMinutes: reminder,
@@ -1237,6 +1266,7 @@ PluginComponent {
                 function resetMetadata() {
                     dueDateInput.text = ""
                     composeDueTime = ""
+                    descriptionInput.text = ""
                     tagsInput.text = ""
                     composePriority = ""
                     composeReminderMinutes = null
@@ -1349,6 +1379,7 @@ PluginComponent {
                         return
                     editingId = id
                     addInput.text = t.text
+                    descriptionInput.text = t.description || ""
                     dueDateInput.text = t.dueDate || ""
                     composeDueTime = t.dueTime || ""
                     tagsInput.text = t.tags ? t.tags.join(", ") : ""
@@ -1427,6 +1458,7 @@ PluginComponent {
                         const id = editingId
                         const newText = addInput.text
                         const ok = root.editTodoDetails(id, newText, {
+                            description: descriptionInput.text,
                             dueDate: dueDateInput.text,
                             dueTime: composeDueTime,
                             reminderMinutes: composeReminderMinutes,
@@ -1443,6 +1475,7 @@ PluginComponent {
                         return ok
                     }
                     if (root.addTodo(addInput.text, addingChildOfId || null, {
+                        description: descriptionInput.text,
                         dueDate: dueDateInput.text,
                         dueTime: composeDueTime,
                         reminderMinutes: composeReminderMinutes,
@@ -1679,6 +1712,60 @@ PluginComponent {
                     width: parent.width
                     spacing: Theme.spacingM
                     visible: popoutColumn.editorOpen
+
+                    Column {
+                        width: parent.width
+                        spacing: 5
+
+                        StyledText {
+                            text: "Details"
+                            font.pixelSize: Theme.fontSizeSmall
+                            color: Theme.surfaceVariantText
+                        }
+
+                        Rectangle {
+                            width: parent.width
+                            height: 112
+                            radius: Theme.cornerRadius
+                            color: Theme.surfaceContainerHigh
+                            border.width: 1
+                            border.color: descriptionInput.activeFocus ? Theme.primary : Theme.outlineVariant
+
+                            ScrollView {
+                                id: descriptionScroll
+                                anchors.fill: parent
+                                clip: true
+                                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                                TextArea {
+                                    id: descriptionInput
+                                    width: descriptionScroll.availableWidth
+                                    height: Math.max(descriptionScroll.availableHeight, contentHeight + topPadding + bottomPadding)
+                                    placeholderText: "Add notes, links, or context"
+                                    placeholderTextColor: Theme.surfaceVariantText
+                                    color: Theme.surfaceText
+                                    selectionColor: Theme.primary
+                                    selectedTextColor: Theme.onPrimary
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    wrapMode: TextArea.Wrap
+                                    textFormat: TextEdit.PlainText
+                                    selectByMouse: true
+                                    activeFocusOnTab: true
+                                    leftPadding: Theme.spacingM
+                                    rightPadding: Theme.spacingM
+                                    topPadding: Theme.spacingS
+                                    bottomPadding: Theme.spacingS
+                                    background: null
+                                    Keys.onEscapePressed: popoutColumn.cancelComposer()
+                                    onTextChanged: {
+                                        if (length > root.maxDescriptionLength)
+                                            remove(root.maxDescriptionLength, length)
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     Column {
                         width: parent.width

@@ -43,7 +43,7 @@ The main files shipped with the plugin are:
 
 Todos are a flat array with `parentId` linking children to parents (null = top-level). **Array order is display order**, so reorder operations mutate array position and the `parentId` field in tandem. Deletions are soft deletes via `deletedAt`; deleted rows remain persisted but are filtered out of UI counts and list models.
 
-Storage is a single JSON file (`$XDG_CONFIG_HOME/dank-todo/todos.json` by default) written via `Quickshell.Io.FileView` with `atomicWrites: true` and `watchChanges: false` — we own the writes, so watching would cause reload loops. Schema v4 adds `dueTime`, `reminderMinutes`, `recurrence`, persisted reminder state, and top-level UI preferences such as `sortMode`. The loader migrates legacy versions and auto-sanitizes dangling parent references.
+Storage is a single JSON file (`$XDG_CONFIG_HOME/dank-todo/todos.json` by default) written via `Quickshell.Io.FileView` with `atomicWrites: true` and `watchChanges: false` — we own the writes, so watching would cause reload loops. Schema v4 includes optional plain-text `description`, `dueTime`, `reminderMinutes`, `recurrence`, persisted reminder state, and top-level UI preferences such as `sortMode`. The loader migrates legacy versions and auto-sanitizes dangling parent references.
 
 ### Hierarchy helpers
 
