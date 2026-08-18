@@ -1174,13 +1174,16 @@ PluginComponent {
         printErrors: false
 
         onSaved: {
-            if (typeof ToastService !== "undefined")
-                ToastService.showInfo("Markdown export saved", root.lastExportPath)
+            if (typeof ToastService !== "undefined") {
+                const home = Quickshell.env("HOME")
+                const displayPath = home && root.lastExportPath.indexOf(home) === 0 ? ("~" + root.lastExportPath.substring(home.length)) : root.lastExportPath
+                ToastService.showInfo("Saved to " + displayPath, root.lastExportPath)
+            }
         }
 
         onSaveFailed: error => {
             if (typeof ToastService !== "undefined")
-                ToastService.showError("Couldn't export Markdown", root.lastExportPath)
+                ToastService.showError("Couldn't save Markdown to " + root.lastExportPath)
         }
     }
 
