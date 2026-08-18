@@ -724,6 +724,18 @@ PluginComponent {
         saveTodos()
     }
 
+    function cancelTodoProgress(id) {
+        const idx = todos.findIndex(t => t.id === id && !t.deletedAt && !t.completed && t.inProgress)
+        if (idx === -1)
+            return false
+        const next = todos.slice()
+        next[idx] = Object.assign({}, next[idx], { inProgress: false })
+        todos = next
+        revision++
+        saveTodos()
+        return true
+    }
+
     function deleteTodo(id) {
         const toDelete = new Set([id])
         const descendants = getDescendantIds(id)
@@ -1064,6 +1076,10 @@ PluginComponent {
         function toggle(id: string): string {
             root.toggleTodo(id)
             return "OK"
+        }
+
+        function cancelProgress(id: string): string {
+            return root.cancelTodoProgress(id) ? "OK" : "UNCHANGED"
         }
 
         function edit(id: string, text: string): string {
@@ -2447,7 +2463,7 @@ PluginComponent {
                                 property var taskObject: modelData
                                 property string taskTitle: String(modelData && modelData.text !== undefined ? modelData.text : "")
 
-                                TodoTaskRowV5 {
+                                TodoTaskRowV6 {
                                     id: calendarRow
                                     anchors.fill: parent
                                     pluginRoot: root
@@ -2601,7 +2617,7 @@ PluginComponent {
                                 Drag.hotSpot.x: dragProxy.width / 2
                                 Drag.hotSpot.y: dragProxy.height / 2
 
-                                TodoTaskRowV5 {
+                                TodoTaskRowV6 {
                                     id: taskRow
                                     x: slot.depth * listContainer.indentStep
                                     width: dragProxy.width - x

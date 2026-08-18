@@ -2,7 +2,7 @@
     "id": "dankTodo",
     "name": "Dank Todo",
     "description": "A local-first task manager with details, schedules, reminders, recurring tasks, and calendar views",
-    "version": "2.5.0",
+    "version": "2.5.1",
     "license": "MIT",
     "author": "Deepu K Sasidharan, yyydddkkk",
     "icon": "checklist",
