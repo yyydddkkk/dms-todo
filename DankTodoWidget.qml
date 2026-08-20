@@ -678,17 +678,70 @@ PluginComponent {
             return completed >= monthStart && completed < nextMonthStart
         })
 
-        return filtered.map((todo, index) => ({ todo: todo, index: index }))
-            .sort((a, b) => {
-                const parsedA = a.todo.completedAt ? Date.parse(a.todo.completedAt) : NaN
-                const parsedB = b.todo.completedAt ? Date.parse(b.todo.completedAt) : NaN
-                const timeA = isNaN(parsedA) ? 0 : parsedA
-                const timeB = isNaN(parsedB) ? 0 : parsedB
-                if (timeA !== timeB)
-                    return timeB - timeA
-                return a.index - b.index
-            })
-            .map(entry => entry.todo)
+        // Keep visible parent/child groups together. A task whose parent is not
+        // part of the current time filter becomes a root for this result.
+        const visibleById = new Map(filtered.map(todo => [todo.id, todo]))
+        const childrenByParent = new Map()
+        const roots = []
+        for (const todo of filtered) {
+            const visibleParentId = todo.parentId && visibleById.has(todo.parentId) ? todo.parentId : null
+            if (!visibleParentId) {
+                roots.push(todo)
+                continue
+            }
+            if (!childrenByParent.has(visibleParentId))
+                childrenByParent.set(visibleParentId, [])
+            childrenByParent.get(visibleParentId).push(todo)
+        }
+
+        function completionTime(todo) {
+            const parsed = todo.completedAt ? Date.parse(todo.completedAt) : NaN
+            return isNaN(parsed) ? 0 : parsed
+        }
+
+        function latestInGroup(todo, visiting) {
+            if (visiting.has(todo.id))
+                return completionTime(todo)
+            visiting.add(todo.id)
+            let latest = completionTime(todo)
+            const children = childrenByParent.get(todo.id) || []
+            for (const child of children)
+                latest = Math.max(latest, latestInGroup(child, visiting))
+            visiting.delete(todo.id)
+            return latest
+        }
+
+        roots.sort((a, b) => latestInGroup(b, new Set()) - latestInGroup(a, new Set()))
+        const ordered = []
+        const appended = new Set()
+        function appendGroup(todo) {
+            if (appended.has(todo.id))
+                return
+            appended.add(todo.id)
+            ordered.push(todo)
+            const children = childrenByParent.get(todo.id) || []
+            for (const child of children)
+                appendGroup(child)
+        }
+        for (const rootTodo of roots)
+            appendGroup(rootTodo)
+        // Defensive fallback for malformed cyclic data.
+        for (const todo of filtered)
+            appendGroup(todo)
+        return ordered
+    }
+
+    function depthWithinTasks(id, visibleTasks) {
+        const visibleIds = new Set((visibleTasks || []).map(todo => todo.id))
+        let depth = 0
+        let current = todos.find(todo => todo.id === id)
+        const visited = new Set()
+        while (current && current.parentId && visibleIds.has(current.parentId) && !visited.has(current.id)) {
+            visited.add(current.id)
+            depth++
+            current = todos.find(todo => todo.id === current.parentId)
+        }
+        return Math.min(depth, 8)
     }
 
     function hasCompletedAncestor(id) {
@@ -812,20 +865,62 @@ PluginComponent {
         const wasInProgress = !wasCompleted && Boolean(source.inProgress)
         const nextCompleted = !wasCompleted && wasInProgress
         const nextInProgress = !wasCompleted && !wasInProgress
+        const completedAt = nextCompleted ? new Date().toISOString() : undefined
         next[idx] = Object.assign({}, source, {
             completed: nextCompleted,
             inProgress: nextInProgress,
-            completedAt: nextCompleted ? new Date().toISOString() : undefined,
+            completedAt: completedAt,
             reminderState: nextCompleted ? {} : (source.reminderState || {})
         })
-        if (nextCompleted && source.recurrence && source.dueDate && !source.nextRecurrenceId) {
-            const successor = recurringSuccessor(source)
-            if (successor) {
-                next[idx] = Object.assign({}, next[idx], { nextRecurrenceId: successor.id })
-                next.splice(idx, 0, successor)
+
+        if (nextCompleted) {
+            const descendants = getDescendantIds(id)
+            const completedNowIds = new Set([id])
+            for (let i = 0; i < next.length; i++) {
+                const todo = next[i]
+                if (!descendants.has(todo.id) || todo.deletedAt || todo.completed)
+                    continue
+                completedNowIds.add(todo.id)
+                next[i] = Object.assign({}, todo, {
+                    completed: true,
+                    inProgress: false,
+                    completedAt: completedAt,
+                    reminderState: {}
+                })
             }
+
+            const successorBySourceId = new Map()
+            for (let i = 0; i < next.length; i++) {
+                const todo = next[i]
+                if (!completedNowIds.has(todo.id) || todo.deletedAt || !todo.completed || !todo.recurrence || !todo.dueDate || todo.nextRecurrenceId)
+                    continue
+                const successor = recurringSuccessor(todo)
+                if (!successor)
+                    continue
+                successorBySourceId.set(todo.id, successor)
+                next[i] = Object.assign({}, todo, { nextRecurrenceId: successor.id })
+            }
+            for (const [sourceId, successor] of successorBySourceId) {
+                const sourceTodo = next.find(todo => todo.id === sourceId)
+                const parentSuccessor = sourceTodo && sourceTodo.parentId ? successorBySourceId.get(sourceTodo.parentId) : null
+                const parentTodo = sourceTodo && sourceTodo.parentId ? next.find(todo => todo.id === sourceTodo.parentId) : null
+                successor.parentId = parentSuccessor ? parentSuccessor.id : (parentTodo && !parentTodo.completed ? parentTodo.id : null)
+            }
+            if (successorBySourceId.size > 0) {
+                const withSuccessors = []
+                for (const todo of next) {
+                    const successor = successorBySourceId.get(todo.id)
+                    if (successor)
+                        withSuccessors.push(successor)
+                    withSuccessors.push(todo)
+                }
+                todos = withSuccessors
+            } else {
+                todos = next
+            }
+        } else {
+            todos = next
         }
-        todos = next
         revision++
         saveTodos()
     }
@@ -1334,7 +1429,7 @@ PluginComponent {
 
     Component.onCompleted: reloadTodos()
 
-    TodoFullscreenV5 {
+    TodoFullscreenV6 {
         pluginRoot: root
         targetScreen: root.parentScreen
         shown: root.fullscreenOpen
@@ -1823,7 +1918,7 @@ PluginComponent {
                 Component {
                     id: completedSectionComponent
 
-                    CompletedTasksSectionV6 {
+                    CompletedTasksSectionV7 {
                         pluginRoot: root
                         controller: popoutColumn
                     }

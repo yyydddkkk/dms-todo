@@ -9,6 +9,7 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 - Dedicated create/edit page opened from the main list
 - Optional multiline task details, kept out of the compact task rows
 - Three-state task cycle: not started → in progress → completed
+- Completing a parent recursively completes all of its non-deleted subtasks
 - Per-item delete (cascades to subtasks) and "Clear completed" both soft-delete items in storage
 - Unified task page with active tasks first and a collapsed, independently scrollable Completed section below
 - Adaptive active-list height that shows roughly 10–13 tasks before scrolling, depending on screen height
@@ -35,9 +36,9 @@ A local-first task manager for the [DankMaterialShell](https://github.com/Avenge
 ## Code structure
 
 - `DankTodoWidget.qml` — plugin entry, persistence, IPC, and page coordination
-- `TodoFullscreenV5.qml` — expanded floating card with separate lists, completion-period filters, and Markdown export
+- `TodoFullscreenV6.qml` — expanded floating card with separate lists, completion-period filters, completed-task hierarchy, and Markdown export
 - `TodoTaskRowV7.qml` — active shared task row with solid-circle progress, right-click cancellation, compact schedule metadata, and overflow actions (older versions are retained for DMS cache compatibility)
-- `CompletedTasksSectionV6.qml` — active completed-task section with time filtering and its independent list (older versions are retained for cache compatibility)
+- `CompletedTasksSectionV7.qml` — active completed-task section with time filtering, hierarchy, and its independent list (older versions are retained for cache compatibility)
 - `TodoCalendarGrid.qml` — reusable month grid for date selection and schedule views
 - `TodoUtils.js` — pure date, priority, and tag helpers
 - `DankTodoSettings.qml` — plugin settings page
@@ -72,7 +73,7 @@ Click the pill in the bar to open the popout. The main page is dedicated to brow
 
 All-day tasks do not send notifications. Timed tasks can remind at the due time or in advance. After a reminder fires, use **Snooze 10 minutes** in the task menu to postpone it. Completing a recurring task keeps the completed occurrence and creates the next future occurrence on the original cadence.
 
-Expand **Completed** to filter its independent list by the current week, previous week, current month, or a custom inclusive date range. Custom ranges use calendar pickers and initially cover the most recent seven days. Completed tasks are shown newest first; legacy items without a completion timestamp remain available under **All**.
+Expand **Completed** to filter its independent list by the current week, previous week, current month, or a custom inclusive date range. Custom ranges use calendar pickers and initially cover the most recent seven days. Completed parent/child groups stay together with nested indentation, while groups are ordered by their most recent completion. Legacy items without a completion timestamp remain available under **All**.
 
 Use the `open_in_full` icon at the bottom-right of the popout to open an expanded floating Todo card. Active and Completed remain visually separate and scroll independently; Completed keeps its current-week, previous-week, current-month, and custom calendar-range filters. Press **Escape**, click outside the card, or use the close icon to leave it. Task creation and full metadata editing remain in the compact popout.
 
